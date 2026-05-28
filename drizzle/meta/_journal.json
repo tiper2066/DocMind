@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1779921233933,
+      "tag": "0000_worried_squadron_sinister",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779921386621,
+      "tag": "0001_pgvector_index",
+      "breakpoints": true
+    }
+  ]
+}

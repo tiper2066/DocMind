@@ -1,0 +1,128 @@
+{
+  "$schema": "./tokens.ppt.schema.json",
+  "name": "DocMind PPT tokens",
+  "version": "1.0.0",
+  "source": "Figma s10NvmcaLP3ytq56jH9zyd (Penta Security corporate template)",
+  "canvas": {
+    "width": 1920,
+    "height": 1080,
+    "aspect": "16:9",
+    "unit": "px"
+  },
+  "color": {
+    "bg": "#FFFFFF",
+    "footer": {
+      "body": "#F2F2F2",
+      "end": "#000000"
+    },
+    "ink": "#000000",
+    "ink2": "#404040",
+    "text": {
+      "secondary": "#7F7F7F",
+      "tertiary": "#999B9E",
+      "muted": "#C9C9C9"
+    },
+    "rule": "#E5E5E5",
+    "accent": {
+      "penta": "#0060A9",
+      "_note": "Penta 로고 'penta' 글자 색. 'SECURITY' 글자는 color.text.tertiary(#999B9E)."
+    },
+    "semantic": {
+      "positive": "#16A34A",
+      "negative": "#DC2626"
+    }
+  },
+  "font": {
+    "family": {
+      "heading": "Pretendard, 'Gotham', 'Malgun Gothic', sans-serif",
+      "body": "Pretendard, 'Gotham', 'Malgun Gothic', sans-serif"
+    },
+    "weight": {
+      "bold": 700,
+      "medium": 500,
+      "book": 400
+    }
+  },
+  "size": {
+    "display": 80,
+    "h1": 56,
+    "h2": 44,
+    "h3": 28,
+    "h4": 22,
+    "body": 18,
+    "small": 14,
+    "micro": 10.5,
+    "watermark.section": 240,
+    "watermark.quote": 280,
+    "metric.value": 88,
+    "cta.headline": 64
+  },
+  "tracking": {
+    "display": -2,
+    "heading": -1,
+    "body": -0.7,
+    "tight": -0.5,
+    "eyebrow": 4
+  },
+  "lineHeight": {
+    "tight": 1.1,
+    "normal": 1.4,
+    "loose": 1.55
+  },
+  "spacing": {
+    "safe": {
+      "x": 120,
+      "yTop": 120,
+      "yBot": 60
+    },
+    "content": {
+      "x": 120,
+      "y": 120,
+      "width": 1680,
+      "height": 900
+    },
+    "footer": {
+      "height": 36,
+      "y": 1044
+    },
+    "gap": {
+      "col": 80,
+      "row": 60,
+      "bulletL0": 56,
+      "bulletL1": 36
+    }
+  },
+  "rule": {
+    "accent": { "width": 60, "height": 2 },
+    "ctaAccent": { "width": 80, "height": 3 },
+    "divider": { "width": 1, "color": "#E5E5E5" }
+  },
+  "footerMaster": {
+    "body": {
+      "bar": { "x": 0, "y": 1044, "w": 1920, "h": 36, "fill": "#F2F2F2" },
+      "securityChip": { "x": 10, "y": 1054, "w": 142, "h": 16 },
+      "wordmark": { "x": 1700, "y": 1056, "w": 210, "h": 14 }
+    }
+  },
+  "coverMaster": {
+    "wordmark": { "x": 61, "y": 57, "w": 243, "h": 27 },
+    "earth": { "x": 952, "y": 455, "w": 970, "h": 627 },
+    "awards": { "x": 61, "y": 978, "w": 406, "h": 80 }
+  },
+  "assets": {
+    "basePath": "src/design/assets/ppt",
+    "pentaLarge": "penta_black_large.png",
+    "pentaSmall": "penta_black_small.png",
+    "pentaColor": "penta_color.png",
+    "earth": "earth_security_node.png",
+    "awardsCover": "awards_badge_cover.png",
+    "awardsBack": "awards_badge_back.png",
+    "securityLevel": {
+      "1": "security_level_1.png",
+      "2": "security_level_2.png",
+      "3": "security_level_3.png",
+      "4": "security_level_4.png",
+      "5": "security_level_5.png"
+    }
+  }
+}

@@ -32,11 +32,11 @@
 
 | 항목 | 값 |
 |---|---|
-| **활성 Phase** | Phase 1 — 레포 부트스트랩 & 인증 기반 |
-| **완료 Phase** | Phase 0 (외부 의존성·키 확보) |
-| **다음 액션** | Sentry 잔여만 남음. `SENTRY_DSN` 발급 후 wizard 적용 → Phase 1 완료. 발급 전이면 **Phase 2 (KB) 선행** 가능 |
-| **마지막 갱신** | 2026-05-28 (Phase 1 검증 #2·#3 통과 — signIn 5/5 + DOC_TYPES 6개. Sentry 만 잔여) |
-| **블로커** | `SENTRY_DSN` 미발급 → Phase 1 의 Sentry 항목 보류. 다른 작업 진행에는 영향 없음 |
+| **활성 Phase** | Phase 2 — 지식 베이스 (KB) |
+| **완료 Phase** | Phase 0, Phase 1 |
+| **다음 액션** | [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) 15장 Phase 2 — KB 공통 인프라부터 (`pnpm add @anthropic-ai/sdk voyageai inngest p-limit ulid zod`) |
+| **마지막 갱신** | 2026-05-28 (Phase 1 ✅ 완료 — Sentry wizard 적용 + sendDefaultPii 보안 패치) |
+| **블로커** | (없음) |
 
 상세 체크박스는 [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) 15장에 있다. 본 표는 그 헤더만 옮긴 것이라고 생각하면 된다.
 
@@ -148,6 +148,8 @@ pnpm db:seed              # "Penta Security" 워크스페이스 시드
 - **한글 폰트 미임베딩** → .pptx 가 시청자 PC 에서 글자 깨짐. 발표 PC 의 PowerPoint 기본 폰트 (`맑은 고딕`) 로 디자인 토큰 강제 또는 pptxgenjs `embedFonts` 검토.
 - **Next.js 16: `middleware` 파일 컨벤션 deprecated → `proxy` 로 변경 예정** → 현재 dev 시작 시 경고 출력 (동작은 정상). 또한 v16 은 middleware export 형태에 더 엄격 — `export const { auth: middleware } = NextAuth(...)` destructure 형태를 인식 못함. **반드시 default export 한 function** (`export default auth;`) 또는 named `middleware` 함수 export. 향후 Next 가 `proxy` 로 강제 전환 시 파일명·export 명 둘 다 갱신 필요.
 - **Auth.js v5 + Edge middleware + database session** → middleware 는 Edge runtime 이라 DB 접근 불가. 해결: [src/auth.config.ts](src/auth.config.ts) (Edge-safe, JWT session strategy) 와 [src/auth.ts](src/auth.ts) (Node, DrizzleAdapter) 분리. middleware 는 config 만 import.
+- **`@sentry/wizard` 기본 `sendDefaultPii: true`** → 이메일/IP 등 PII 가 Sentry 로 그대로 전송. plan §10 ("PII 는 로그에 남기지 않음") 정면 위반. wizard 실행 후 [sentry.server.config.ts](sentry.server.config.ts), [sentry.edge.config.ts](sentry.edge.config.ts), [src/instrumentation-client.ts](src/instrumentation-client.ts) **3 파일 모두 `false` 로 강제 변경**. 특정 컨텍스트에서만 사용자 식별 필요하면 `beforeSend` 로 명시적 화이트리스트.
+- **pnpm 11 `allowBuilds` placeholder** → 새 native-binary 의존성 (`sharp`, `unrs-resolver`, `esbuild`, `@sentry/cli` 등) 추가 시 [pnpm-workspace.yaml](pnpm-workspace.yaml) 의 `allowBuilds:` 에 `set this to true or false` placeholder 가 자동 추가됨. 이 상태로 `pnpm install` 실행 시 exit 1 로 중단. 해결: 각 패키지를 `true` (build 허용) 또는 `false` (스킵) 로 명시 후 재실행.
 
 ---
 

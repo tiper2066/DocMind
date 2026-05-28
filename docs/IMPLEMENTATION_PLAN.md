@@ -553,7 +553,7 @@ SENTRY_DSN=
 
 ---
 
-### Phase 1 — 레포 부트스트랩 & 인증 기반 🟡
+### Phase 1 — 레포 부트스트랩 & 인증 기반 ✅
 
 > **산출물**: `@pentasecurity.com` 로그인 후 빈 홈 화면(6종 카드)이 뜬다. DB 마이그레이션이 통과한다.
 
@@ -593,8 +593,8 @@ SENTRY_DSN=
 
 **관찰성**
 
-- [ ] Sentry Next.js wizard 적용 (`@sentry/nextjs`)
-- [ ] `instrumentation.ts` + `sentry.client/server.config.ts` 생성
+- [x] Sentry Next.js wizard 적용 (`@sentry/nextjs@^10.54`) — 2026-05-28 `npx @sentry/wizard@latest -i nextjs --saas --org pentasecurity-mh --project javascript-nextjs`
+- [x] [src/instrumentation.ts](../src/instrumentation.ts) + [src/instrumentation-client.ts](../src/instrumentation-client.ts) + [sentry.server.config.ts](../sentry.server.config.ts) + [sentry.edge.config.ts](../sentry.edge.config.ts) + [src/app/global-error.tsx](<../src/app/global-error.tsx>) 생성, [next.config.ts](../next.config.ts) 를 `withSentryConfig` 로 wrap, [.env.sentry-build-plugin](../.env.sentry-build-plugin) (gitignored) 에 build 시 소스맵 업로드용 토큰. **wizard 기본값 `sendDefaultPii: true` 는 plan §10 위반이라 3 파일 모두 `false` 로 강제 변경 (결정 로그 참조)**. DSN 은 wizard 가 코드에 직접 하드코딩 — `SENTRY_DSN` env 는 unused (.env 주석 갱신)
 
 **검증**
 
@@ -930,3 +930,5 @@ SENTRY_DSN=
 - **Next 16 채택** (2026-05-28): `create-next-app@latest` 가 16.2.6 설치. 15 다운그레이드 대신 16 그대로 진행. App Router/Server Actions 등 핵심 API 호환, plan 의 "Next 15" 표현은 16 으로 갱신.
 - **shadcn `toast` → `sonner`** (2026-05-28): shadcn v4 에서 `toast` 컴포넌트가 deprecated, `sonner` 권장. plan 의 기본 컴포넌트 목록에서 toast 자리를 sonner 로 대체.
 - **Auth.js v5 split config + JWT session strategy** (2026-05-28): Edge runtime (middleware) 에서 DB 접근 불가 → [src/auth.config.ts](../src/auth.config.ts) (providers/callbacks, Edge-safe) 와 [src/auth.ts](../src/auth.ts) (+DrizzleAdapter, Node) 로 분리. Session strategy 는 `jwt` 로 — middleware 에서 추가 DB 호출 없이 인증 판정 가능. database strategy 가 필요해지면 (예: 즉시 logout 반영) 전환.
+- **Sentry `sendDefaultPii: false` 강제** (2026-05-28): `@sentry/wizard` 가 기본값 `true` 로 init 코드 생성하지만 plan §10 비기능 ("PII 는 로그에 남기지 않음") 과 정면 충돌. [sentry.server.config.ts](../sentry.server.config.ts), [sentry.edge.config.ts](../sentry.edge.config.ts), [src/instrumentation-client.ts](../src/instrumentation-client.ts) 3 파일 모두 `false` 로 변경. 향후 특정 컨텍스트만 화이트리스트하려면 `beforeSend` 에서 명시.
+- **Sentry DSN 하드코딩 유지** (2026-05-28): wizard 가 3 init 파일에 DSN 을 직접 박는데 DSN 은 공개해도 무방 (Sentry 표준 권장) → 환경변수화하지 않고 하드코딩 유지. `SENTRY_DSN` env 는 unused — 향후 환경별 DSN 분기 필요 시 (`process.env.NEXT_PUBLIC_SENTRY_DSN`) 코드 갈아끼움. env 파일 주석으로 명시.

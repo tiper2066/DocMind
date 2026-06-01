@@ -32,10 +32,10 @@
 
 | 항목 | 값 |
 |---|---|
-| **활성 Phase** | Phase 2 — 지식 베이스 (KB) |
-| **완료 Phase** | Phase 0, Phase 1 |
-| **다음 액션** | [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) 15장 Phase 2 — KB 공통 인프라부터 (`pnpm add @anthropic-ai/sdk voyageai inngest p-limit ulid zod`) |
-| **마지막 갱신** | 2026-05-28 (Phase 1 ✅ 완료 — Sentry wizard 적용 + sendDefaultPii 보안 패치) |
+| **활성 Phase** | Phase 8 — UI 디자인 시스템 적용 ([docs/DESIGN.md](docs/DESIGN.md)) |
+| **완료 Phase** | Phase 0, Phase 1, Phase 2, Phase 3, Phase 4, Phase 5, Phase 6, Phase 7 |
+| **다음 액션** | [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) 15장 Phase 8 — `tokens.web.json` + `tailwind-preset.ts` + `globals.css`(:root/.dark) + Pretendard, shadcn 컴포넌트 토큰 매핑, 화면별 DESIGN.md 적용, 다크모드. **전제**: Phase 1–7 모든 화면이 shadcn 기본으로 기능 동작 중 → 토큰 일괄 적용. **주의**: ActivityFeed/LoopDiagram phase 색([phases.ts](src/components/agent/phases.ts))은 Tailwind 팔레트 → brand spectrum 으로 remap 필요 |
+| **마지막 갱신** | 2026-06-01 (Phase 7 ✅ 전체 완료 — (5) 설정: `/settings`(에이전트 정책 auto_run/publish + Slack 채널, monitor `config_json` 저장)·이메일 수신자·브랜드 템플릿(읽기)·연결 배지 + `/api/settings` PATCH. `act` 가 `getNotifyChannel`/`shouldAutoPublish` 로 설정 반영. roundtrip 검증 PASS, nav 설정 링크. Phase 7 (1)~(5) 모두 ✅, 실시간 1초·승인 시각 e2e 만 브라우저 1회 잔여) |
 | **블로커** | (없음) |
 
 상세 체크박스는 [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) 15장에 있다. 본 표는 그 헤더만 옮긴 것이라고 생각하면 된다.
@@ -120,8 +120,14 @@ pnpm db:migrate           # 마이그레이션 DB 적용 (Pooler URL + prepare:f
 pnpm db:studio            # Drizzle Studio (스키마/데이터 GUI)
 pnpm db:seed              # "Penta Security" 워크스페이스 시드
 
-# (Phase 2 이후 추가 예정)
-# npx inngest-cli@latest dev  # 로컬 Inngest 대시보드
+pnpm verify:kb-url [url]  # URL → ready 까지 e2e 검증 (기본: WAPPLES)
+pnpm verify:kb-file <url> # 공개 파일 URL 다운로드 → Storage 업로드 → ready 까지 e2e
+pnpm verify:agent         # 자율 루프 e2e: forced content_hash → 5단계 event + 승인 + published (자급식·오프라인)
+
+# 로컬 dev 동시 실행 (KB / agent 워커 동작 확인 시) — 반드시 2개 터미널
+# 터미널 1:  INNGEST_DEV=1 pnpm dev
+# 터미널 2:  pnpm inngest          # = inngest-cli@latest dev -u http://localhost:3000/api/inngest
+#   (bare `inngest-cli` 는 전역 설치 안 돼 command not found → pnpm 스크립트 또는 npx 로 실행)
 ```
 
 ---
@@ -143,6 +149,10 @@ pnpm db:seed              # "Penta Security" 워크스페이스 시드
 - **Supabase Data API public 스키마 기본 노출 종료 (2026-10-30 부터)** → 그날 이후 신규 테이블은 `anon/authenticated/service_role` GRANT 없으면 PostgREST/GraphQL/supabase-js `.from()` 으로 접근 불가. **DocMind 는 영향 없음** (DB 데이터는 Drizzle + postgres-js 직결만 사용, supabase-js 는 Storage 전용). **규칙: `supabase.from()/.rpc()` (Data API) 호출 금지** — 데이터 쿼리는 Drizzle, 파일은 `supabase.storage.from()` 만. 가이드: [github.com/orgs/supabase/discussions/45329](https://github.com/orgs/supabase/discussions/45329).
 - **Google 도메인 검증** → `profile.email` 로 하면 우회 가능. **반드시 `profile.hd === 'pentasecurity.com'`** 검증.
 - **Inngest step 미사용** → `step.run("name", async () => ...)` 로 감싸지 않으면 한 step 실패가 전체 재시도로 번진다.
+- **Inngest v4 `createFunction` 시그니처** → v3 의 3-인자(`(opts, trigger, handler)`) 가 아니라 **2-인자(`(opts, handler)`)** 다. trigger 는 `opts.triggers: [{ event: "..." }]` 배열로 들어간다. 3-인자로 쓰면 `TS2554: Expected 2 arguments, but got 3` + handler 의 `event/step` 가 `any` 가 된다.
+- **Inngest v4 `onFailure` 의 원본 페이로드 경로** → `({ event, error }) => ...` 에서 원본 이벤트는 `event.data.event.data` (NOT `event.data`). `event.data` 는 `{ function_id, run_id, error, event: <원본 페이로드> }` 인 wrapper 다.
+- **Inngest dev 모드 활성화 = `INNGEST_DEV=1`** → v4 SDK 는 기본적으로 cloud 모드(시그니처 검증). 로컬에서 `inngest-cli dev` 를 쓰려면 Next 앱과 SDK send 양쪽 모두 `INNGEST_DEV=1` 가 env 에 있어야 한다. 안 그러면 (a) `/api/inngest` 가 `Signature validation failed` 로 401, (b) `inngest.send()` 가 cloud 로 흘러서 dev 서버는 이벤트를 못 본다. **반드시 `INNGEST_DEV=1 pnpm dev`** 로 띄울 것. 스크립트도 같은 env 로.
+- **ES import hoist vs env 초기화** → `db/client.ts` 처럼 import 시점에 `process.env.X` 를 검증/사용하는 모듈을 스크립트에서 import 할 때, 같은 파일 안의 `dotenv.config()` 호출은 hoist 된 import 이후에 실행되므로 무용지물이다. 해결: **Node 22 의 `tsx --env-file=.env.local script.ts`** 사용 (Node 가 인터프리터 시작 전 .env 적용). `INNGEST_DEV` 등도 같은 이유로 `npm run` script 의 명령 앞부분에 박는다 (`INNGEST_DEV=1 tsx ...`).
 - **Supabase Storage 키 클라이언트 생성** → 클라가 키 이름 정하면 덮어쓰기 공격 가능. 서버에서 `${workspaceId}/${ulid()}/${safeName}` 강제.
 - **콜드스타트 (Supabase 는 없지만 LLM·Inngest 는 첫 호출 지연)** → 데모 10분 전 warmup ping 1회.
 - **한글 폰트 미임베딩** → .pptx 가 시청자 PC 에서 글자 깨짐. 발표 PC 의 PowerPoint 기본 폰트 (`맑은 고딕`) 로 디자인 토큰 강제 또는 pptxgenjs `embedFonts` 검토.
@@ -150,6 +160,10 @@ pnpm db:seed              # "Penta Security" 워크스페이스 시드
 - **Auth.js v5 + Edge middleware + database session** → middleware 는 Edge runtime 이라 DB 접근 불가. 해결: [src/auth.config.ts](src/auth.config.ts) (Edge-safe, JWT session strategy) 와 [src/auth.ts](src/auth.ts) (Node, DrizzleAdapter) 분리. middleware 는 config 만 import.
 - **`@sentry/wizard` 기본 `sendDefaultPii: true`** → 이메일/IP 등 PII 가 Sentry 로 그대로 전송. plan §10 ("PII 는 로그에 남기지 않음") 정면 위반. wizard 실행 후 [sentry.server.config.ts](sentry.server.config.ts), [sentry.edge.config.ts](sentry.edge.config.ts), [src/instrumentation-client.ts](src/instrumentation-client.ts) **3 파일 모두 `false` 로 강제 변경**. 특정 컨텍스트에서만 사용자 식별 필요하면 `beforeSend` 로 명시적 화이트리스트.
 - **pnpm 11 `allowBuilds` placeholder** → 새 native-binary 의존성 (`sharp`, `unrs-resolver`, `esbuild`, `@sentry/cli` 등) 추가 시 [pnpm-workspace.yaml](pnpm-workspace.yaml) 의 `allowBuilds:` 에 `set this to true or false` placeholder 가 자동 추가됨. 이 상태로 `pnpm install` 실행 시 exit 1 로 중단. 해결: 각 패키지를 `true` (build 허용) 또는 `false` (스킵) 로 명시 후 재실행.
+- **voyageai SDK 의 깨진 ESM 빌드** → `voyageai@0.2.1` 의 `package.json` 이 `module: dist/esm/index.mjs` 를 가리키지만 그 파일이 `'../local'`·`'./ExtendedClient'` 같은 존재하지 않는 경로를 import 한다. Next 16 (Turbopack) production build 가 ESM 우선 해석 → `ERR_UNSUPPORTED_DIR_IMPORT`. `serverExternalPackages` 로도 우회 안됨. **해결: SDK 제거하고 [src/lib/embeddings.ts](src/lib/embeddings.ts) 에서 `https://api.voyageai.com/v1/embeddings` 를 fetch 로 직접 호출**. 향후 SDK 가 고쳐지면 되돌릴 수 있음.
+- **Node 전용 native 의존성과 Next 16 번들링** → `pdf-parse` (pdfjs-dist 래퍼), `jsdom` 등은 Next 가 ESM 으로 번들하려 하면 빌드/런타임 실패. [next.config.ts](next.config.ts) 의 `serverExternalPackages: ["pdf-parse", "jsdom"]` 에 추가해 Node `require` 로 두 번 다 로드되게 한다. 새 native-만-가능 패키지 추가 시 동일 처리.
+- **`<html>` hydration mismatch (`data-hwp-extension` 등)** → 서버 HTML 엔 없고 클라엔 있는 속성 경고는 **브라우저 확장프로그램**이 React 로드 전 `<html>` 에 주입한 것(앱 버그 아님). 동반되는 `message channel closed before a response` 도 확장 메시징 노이즈. 시크릿 창이면 사라짐. 완화: [src/app/layout.tsx](src/app/layout.tsx) `<html suppressHydrationWarning>` (해당 요소 속성만 무시, 자식 검사는 유지).
+- **Voyage 무료 티어 = 3 RPM / 10K TPM** → 결제수단 미등록 시 분당 3 호출 한도. 인터뷰 5문답 + KB 매칭 + generate(11+ 호출) 가 1~2분에 몰리면 즉시 429 (`voyage 429: You have not yet added your payment method ...`). **영구 해결**: [dashboard.voyageai.com](https://dashboard.voyageai.com) 에서 결제수단 등록 → 표준 limit 으로 자동 복구. **앱 측 방어**: (a) [src/lib/embeddings.ts](src/lib/embeddings.ts) 가 query embedding 을 process-level Map cache (256 entry LRU) + 429 시 25s 대기 후 1회 재시도, (b) 인터뷰 turn 은 `sources` step + 초기 SSR 에서만 KB 매칭 (다른 turn 은 직전 매칭을 store 가 유지), (c) generate 는 모든 slide-fill query 를 단일 batched `embed()` 호출로 묶음. 총 호출 수 17 → 4 (75% 절감).
 
 ---
 

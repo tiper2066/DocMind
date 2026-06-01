@@ -15,6 +15,13 @@
       "when": 1779921386621,
       "tag": "0001_pgvector_index",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780264949788,
+      "tag": "0002_peaceful_shen",
+      "breakpoints": true
     }
   ]
 }

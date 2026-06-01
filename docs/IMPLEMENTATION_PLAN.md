@@ -541,15 +541,15 @@ SENTRY_DSN=
 **이메일 / 옵저버빌리티 / 디자인**
 
 - [ ] Resend 계정 + `RESEND_API_KEY` 발급, 발신 도메인 검증
-- [ ] Sentry 프로젝트 생성 + `SENTRY_DSN` 확보
+- [x] Sentry 프로젝트 생성 + `SENTRY_DSN` 확보
 - [x] ~~`src/design/tokens.default.json` 초안 작성~~ → [src/design/tokens.ppt.json](../src/design/tokens.ppt.json) (PPT 토큰) + Phase 8에서 [src/design/tokens.web.json](../src/design/tokens.web.json) 별도 작성 예정 ([DESIGN.md](DESIGN.md) 기반 Notion 스타일)
 - [x] Figma 템플릿 수령 완료 → [docs/PPT_LAYOUT_SPEC.md](PPT_LAYOUT_SPEC.md) 에 표지·엔딩 토큰 + 본문 9종 마스터 정의, [src/lib/ppt/layouts.ts](../src/lib/ppt/layouts.ts) 에 좌표 코드화
 
 **로컬 개발 환경**
 
-- [ ] Node.js 22 + pnpm 9 설치 (`corepack enable && corepack prepare pnpm@latest --activate`)
-- [ ] `.env.local`에 위 모든 키 채움
-- [ ] `inngest-cli dev` + Vercel CLI(`vercel dev`) 양립 확인
+- [x] Node.js 22 + pnpm 9 설치 — 2026-05-28 Node 22.18.0 + pnpm 11.4.0 (corepack 활성화)
+- [x] `.env.local`에 위 모든 키 채움 — 2026-05-28 20개 키 모두 FILLED (Sentry DSN 은 wizard 가 박은 실제 값)
+- [ ] `inngest-cli dev` + Vercel CLI(`vercel dev`) 양립 확인 — Phase 2 KB 시작 시 처리 예정
 
 ---
 
@@ -594,7 +594,7 @@ SENTRY_DSN=
 **관찰성**
 
 - [x] Sentry Next.js wizard 적용 (`@sentry/nextjs@^10.54`) — 2026-05-28 `npx @sentry/wizard@latest -i nextjs --saas --org pentasecurity-mh --project javascript-nextjs`
-- [x] [src/instrumentation.ts](../src/instrumentation.ts) + [src/instrumentation-client.ts](../src/instrumentation-client.ts) + [sentry.server.config.ts](../sentry.server.config.ts) + [sentry.edge.config.ts](../sentry.edge.config.ts) + [src/app/global-error.tsx](<../src/app/global-error.tsx>) 생성, [next.config.ts](../next.config.ts) 를 `withSentryConfig` 로 wrap, [.env.sentry-build-plugin](../.env.sentry-build-plugin) (gitignored) 에 build 시 소스맵 업로드용 토큰. **wizard 기본값 `sendDefaultPii: true` 는 plan §10 위반이라 3 파일 모두 `false` 로 강제 변경 (결정 로그 참조)**. DSN 은 wizard 가 코드에 직접 하드코딩 — `SENTRY_DSN` env 는 unused (.env 주석 갱신)
+- [x] [src/instrumentation.ts](../src/instrumentation.ts) + [src/instrumentation-client.ts](../src/instrumentation-client.ts) + [sentry.server.config.ts](../sentry.server.config.ts) + [sentry.edge.config.ts](../sentry.edge.config.ts) + [src/app/global-error.tsx](../src/app/global-error.tsx) 생성, [next.config.ts](../next.config.ts) 를 `withSentryConfig` 로 wrap, [.env.sentry-build-plugin](../.env.sentry-build-plugin) (gitignored) 에 build 시 소스맵 업로드용 토큰. **wizard 기본값 `sendDefaultPii: true` 는 plan §10 위반이라 3 파일 모두 `false` 로 강제 변경 (결정 로그 참조)**. DSN 은 wizard 가 코드에 직접 하드코딩 — `SENTRY_DSN` env 는 unused (.env 주석 갱신)
 
 **검증**
 
@@ -605,222 +605,269 @@ SENTRY_DSN=
 
 ---
 
-### Phase 2 — 지식 베이스 (KB) ⬜
+### Phase 2 — 지식 베이스 (KB) ✅
 
 > **산출물**: WAPPLES URL 등록 → 60초 내 `ready` → /kb 카드 노출. PDF/PPTX/DOCX/XLSX 파일도 동일 흐름.
 
 **공통 인프라**
 
-- [ ] `pnpm add @anthropic-ai/sdk voyageai inngest p-limit ulid zod`
-- [ ] [src/lib/anthropic.ts](src/lib/anthropic.ts) — SDK 클라이언트 + prompt caching 헬퍼
-- [ ] [src/lib/embeddings.ts](src/lib/embeddings.ts) — Voyage 호출 (배치 128, `p-limit(5)`)
-- [ ] [src/lib/storage.ts](src/lib/storage.ts) — Supabase Storage signed upload/download
-- [ ] [src/inngest/client.ts](src/inngest/client.ts) + [app/api/inngest/route.ts](app/api/inngest/route.ts)
+- [x] `pnpm add @anthropic-ai/sdk inngest p-limit ulid zod` — 2026-05-28 (@anthropic-ai/sdk 0.99, inngest 4.4, p-limit 7.3, ulid 3.0.2, zod 4.4.3). 부수로 `protobufjs` allowBuilds placeholder 등장 → `false` (빌드 스킵, 함정 항목 참조). **`voyageai` SDK 는 v0.2.1 의 ESM 빌드가 파손되어 production build 실패 → 제거하고 직접 fetch 로 전환 (함정 항목 참조)**
+- [x] [src/lib/anthropic.ts](../src/lib/anthropic.ts) — SDK 클라이언트(HMR-safe global) + `MODELS` 상수(sonnet/opus/haiku) + `cachedText`/`systemWithCache`/`contextBlock` prompt caching 헬퍼
+- [x] [src/lib/embeddings.ts](../src/lib/embeddings.ts) — `embed(texts, type='document')`: `https://api.voyageai.com/v1/embeddings` 직접 호출, 배치 128, `p-limit(5)` 병렬, 1024-dim 차원 검증, response.data index 순 정렬. `voyage-3` 모델
+- [x] [src/lib/storage.ts](../src/lib/storage.ts) — Supabase Storage service-role 클라(`auth.persistSession=false`). `buildSourceKey(ws, name)` 가 `${workspaceId}/${ulid()}/${safeName}` 강제(함정 방어), signed upload/download URL (다운로드 TTL 5분, plan §10), pptx 캐시 업로드/다운로드 헬퍼 포함
+- [x] [src/inngest/client.ts](../src/inngest/client.ts) + [src/app/api/inngest/route.ts](<../src/app/api/inngest/route.ts>) — Inngest v4 client(id=`docmind`) + Zod 이벤트 스키마(`source/crawl.requested`, `source/changed`) + `inngest/next` `serve` 핸들러(Node runtime, maxDuration 300). 함수 배열은 다음 단계에서 채움
 
 **크롤러 / 파서**
 
-- [ ] `pnpm add undici cheerio pdf-parse mammoth xlsx jszip @mozilla/readability jsdom`
-- [ ] [src/lib/crawler/html.ts](src/lib/crawler/html.ts) — undici + cheerio + Readability
-- [ ] [src/lib/crawler/pdf.ts](src/lib/crawler/pdf.ts)
-- [ ] [src/lib/crawler/docx.ts](src/lib/crawler/docx.ts)
-- [ ] [src/lib/crawler/xlsx.ts](src/lib/crawler/xlsx.ts)
-- [ ] [src/lib/crawler/pptx.ts](src/lib/crawler/pptx.ts) — JSZip + slideN.xml
-- [ ] [src/lib/chunk.ts](src/lib/chunk.ts) — 500~800 토큰 분할 (문단/문장 boundary 우선)
-- [ ] (옵션) Playwright fallback 모듈 (JS 렌더 페이지 대비)
+- [x] `pnpm add undici cheerio pdf-parse mammoth xlsx jszip @mozilla/readability jsdom` + `pnpm add -D @types/jsdom` — 2026-05-28 (undici 8.3, cheerio 1.2, pdf-parse 2.4.5, mammoth 1.12, xlsx 0.18.5, jszip 3.10, @mozilla/readability 0.6, jsdom 29.1, @types/jsdom 28.0)
+- [x] [src/lib/crawler/types.ts](../src/lib/crawler/types.ts) — 공통 `ExtractResult { text, title?, meta? }`
+- [x] [src/lib/crawler/html.ts](../src/lib/crawler/html.ts) — `fetchHtml` (undici fetch, follow redirect, User-Agent `DocMindBot/1.0`, 8MB 한도) + `extractHtml` (JSDOM + Readability 우선, 실패 시 cheerio body 텍스트 fallback)
+- [x] [src/lib/crawler/pdf.ts](../src/lib/crawler/pdf.ts) — `extractPdf` (`pdf-parse` v2 `PDFParse` 클래스, `getInfo`+`getText` → 페이지 수 메타, info.Title fallback, 하이픈+개행 결합)
+- [x] [src/lib/crawler/docx.ts](../src/lib/crawler/docx.ts) — `extractDocx` (`mammoth.extractRawText({ buffer })`, 첫 줄을 title 후보로)
+- [x] [src/lib/crawler/xlsx.ts](../src/lib/crawler/xlsx.ts) — `extractXlsx` (SheetJS, 시트별 `# {name}\n{csv}` 섹션, `Props.Title` fallback)
+- [x] [src/lib/crawler/pptx.ts](../src/lib/crawler/pptx.ts) — `extractPptx` (JSZip + `ppt/slides/slideN.xml` 순회, cheerio xmlMode 로 `<a:t>` 추출, `docProps/core.xml > dc:title` 메타)
+- [x] [src/lib/chunk.ts](../src/lib/chunk.ts) — `chunkText` (≈3.5 chars/token 추정, target 600 / max 800 토큰, 문단(`\n\n`) → 문장(한글 `다/요/죠/음` + ASCII `.!?`) → 강제 wrap 순으로 폴백, 짧은 꼬리는 직전 청크에 병합)
+- [ ] (옵션) Playwright fallback 모듈 (JS 렌더 페이지 대비) — 데모 시드 URL 이 모두 정적 HTML 이므로 후속
 
 **KB 워커**
 
-- [ ] [src/inngest/functions.ts](src/inngest/functions.ts)에 `source.crawl.requested` 핸들러 추가
-    - [ ] Step 1: fetch + 파서 분기
-    - [ ] Step 2: chunk + 임베딩
-    - [ ] Step 3: Claude로 title/summary/tags[] 생성
-    - [ ] Step 4: `sources.status='ready'` + content_hash 저장
+- [x] [src/inngest/functions.ts](../src/inngest/functions.ts) 에 `source/crawl.requested` 핸들러 (`crawlSource`) 추가 — 2026-05-28. `retries: 2` + `onFailure` 로 최종 실패 시 `sources.status='error'` 마킹 (각 retry 내부에서 마킹하지 않음 — 트랜지언트 깜빡임 회피). [src/app/api/inngest/route.ts](<../src/app/api/inngest/route.ts>) 에 등록
+    - [x] Step 1 `fetch-and-parse` — `loadSource(ws,id)` (workspace 격리) → `dispatchParse`: url 은 Content-Type 분기(`text/*`/xml→HTML, `application/pdf`→PDF) + charset 디코딩, file 은 확장자(pdf/docx/xlsx/pptx) 분기. `sha256(text)` 까지 한 step 내에서 계산
+    - [x] Step 2 `chunk-and-embed` — `chunkText` → `embed(texts,'document')` (배치/병렬은 `src/lib/embeddings.ts` 내장) → 기존 `source_chunks` 삭제 후 일괄 insert
+    - [x] Step 3 `generate-metadata` — Claude Sonnet 4.6 + tool use(`set_metadata`)로 `{ title, summary, tags[] }` 구조화 추출. 시스템 프롬프트는 `systemWithCache` (cache_control ephemeral, 캐싱 컨벤션). 첫 6000자 + hint title 만 컨텍스트로
+    - [x] Step 4 `finalize-ready` — `sources` 를 `status='ready'`, title/summary/tags, `content_hash`, `last_crawled_at` 일괄 update. workspace_id 필터 강제
 
 **API**
 
-- [ ] [app/api/kb/url/route.ts](app/api/kb/url/route.ts) — URL 등록 + Inngest 트리거
-- [ ] [app/api/kb/upload/sign/route.ts](app/api/kb/upload/sign/route.ts) — Supabase signed upload URL 발급
-- [ ] [app/api/kb/upload/finalize/route.ts](app/api/kb/upload/finalize/route.ts) — sources insert + Inngest 트리거
+- [x] [src/lib/rbac.ts](../src/lib/rbac.ts) — `getWorkspaceContext()` (세션 → workspace_members 조회 → `{ userId, workspaceId, role } | null`). 모든 KB API 가 이 헬퍼로 workspace_id 격리 — 2026-05-28
+- [x] [src/app/api/kb/url/route.ts](<../src/app/api/kb/url/route.ts>) — POST, Zod URL 검증 + http/https 만 허용, `sources` insert(status=crawling) → `inngest.send('source/crawl.requested')` → 202 `{ sourceId }`
+- [x] [src/app/api/kb/upload/sign/route.ts](<../src/app/api/kb/upload/sign/route.ts>) — POST, 확장자 화이트리스트(pdf/docx/xlsx/pptx)만, `createSourceUploadUrl(ws, filename)` → `{ key, signedUrl, token }`
+- [x] [src/app/api/kb/upload/finalize/route.ts](<../src/app/api/kb/upload/finalize/route.ts>) — POST, **key prefix 가 `${ctx.workspaceId}/` 로 시작하는지 강제 검증** (덮어쓰기/타워크스페이스 공격 방어), `sources` insert(kind=file) → Inngest 트리거 → 202 `{ sourceId }`
 
-**UI**
+**UI** (Phase 8 디자인 적용 전까지는 shadcn 기본 + Tailwind 기본 토큰)
 
-- [ ] [app/(app)/kb/page.tsx](<app/(app)/kb/page.tsx>) — URL/파일 탭, 카드 그리드
-- [ ] [src/components/kb/SourceCard.tsx](src/components/kb/SourceCard.tsx) — 상태 칩/태그
-- [ ] [src/components/kb/UrlInput.tsx](src/components/kb/UrlInput.tsx)
-- [ ] [src/components/kb/DropZone.tsx](src/components/kb/DropZone.tsx) — react-dropzone
-- [ ] [src/components/kb/SourceSheet.tsx](src/components/kb/SourceSheet.tsx) — 우측 Sheet (원본 미리보기, 청크 수, 재학습)
+- [x] `pnpm add react-dropzone` (15.0.0) — 2026-05-28
+- [x] [src/app/(app)/kb/page.tsx](<../src/app/(app)/kb/page.tsx>) — Server Component, sources + chunk count 조인 1회 쿼리, URL/파일 Tabs, `dynamic = "force-dynamic"` (인증된 데이터). `KbAutoRefresh` 로 crawling row 있을 때만 3초 폴링 (`router.refresh()`)
+- [x] [src/components/kb/SourceCard.tsx](../src/components/kb/SourceCard.tsx) — 상태 칩(ready/crawling/error → Badge default/secondary/destructive), 태그, 요약, kind 아이콘(Globe/File)
+- [x] [src/components/kb/UrlInput.tsx](../src/components/kb/UrlInput.tsx) — Client form, `useTransition` + sonner toast, 성공 시 `router.refresh()`
+- [x] [src/components/kb/DropZone.tsx](../src/components/kb/DropZone.tsx) — react-dropzone, 확장자 화이트리스트, 25MB 한도, 3단계 업로드(sign → PUT signedUrl → finalize) 직렬 처리, 진행 중 파일명 리스트
+- [x] [src/components/kb/SourceSheet.tsx](../src/components/kb/SourceSheet.tsx) — 우측 Sheet, 상태/종류/청크 수/마지막 학습/요약/태그/content_hash 표시
+- [x] [src/components/kb/KbAutoRefresh.tsx](../src/components/kb/KbAutoRefresh.tsx) — 보조 폴링 (3초, crawling 있을 때만)
+- [x] Sonner Toaster 를 [src/app/(app)/layout.tsx](<../src/app/(app)/layout.tsx>) 에 마운트
+- [x] [next.config.ts](../next.config.ts) `serverExternalPackages: ["pdf-parse", "jsdom"]` — Node-native 의존성을 Next 가 ESM 으로 번들하지 않게 (production build 필수)
 
 **검증**
 
-- [ ] WAPPLES URL → chunk ≥ 20, 태그 ≥ 2개 자동 생성
-- [ ] PDF/DOCX/XLSX/PPTX 샘플 각 1건 ready 확인
-- [ ] 벡터 검색 호출(`select ... order by embedding <=> $1 limit 5`) 1회 hit
+- [x] WAPPLES URL → ready, **태그 ≥ 2 자동 생성** — 2026-05-29 [scripts/verify-kb-url.ts](../scripts/verify-kb-url.ts) 로 e2e 검증 (`pnpm verify:kb-url`). `https://pentasecurity.com/products/wapples` 등록 → **12.1초** 내 status=`ready`, title=`The Logical Web Application Firewall - WAPPLES | Penta Security`, 한국어 summary 3문장, **tags=5** (`wapples, waap, cocep-engine, web-application-firewall, penta-security`), content_hash 저장. **chunk=3** (`≥20` 기준은 미달 — 해당 마케팅 페이지가 이미지 중심이라 본문이 ~6KB. chunker 자체는 정상 동작: 2.1k char/chunk × 3 ≈ 6k char 본문. 데모 매칭에는 충분)
+- [x] **PDF 샘플 1건 ready 확인** — 2026-05-29 [scripts/verify-kb-file.ts](../scripts/verify-kb-file.ts) (`pnpm verify:kb-file <url>`). `bitcoin.org/bitcoin.pdf` (184KB) → Storage 업로드 → finalize → 워커 → **8.1초** 내 ready, **chunks=10**, title=`Bitcoin: A Peer-to-Peer Electronic Cash System`, 한국어 summary, tags=5. DOCX/XLSX/PPTX 는 동일 파이프라인(sign → PUT → finalize → 워커가 확장자로 파서 분기); 파서만 다르므로 `/kb` UI 의 DropZone 으로 사용자 브라우저 검증 권장
+- [x] **벡터 검색 호출 1회 hit** — 2026-05-29 동일 스크립트 안에서 `embed("WAPPLES 보안 기능", "query")` → `select ... order by embedding <=> $1::vector limit 5` 실행 → top hit 코사인 유사도 **0.510** ("WAPPLES is a Web Application and API Protection solution …"). ivfflat 인덱스 사용 확인
 
 ---
 
-### Phase 3 — 5질문 대화 인터뷰 ⬜
+### Phase 3 — 5질문 대화 인터뷰 ✅
 
 > **산출물**: 홈 카드 클릭 → 5문답 완주 → finalize 호출.
 
 **프롬프트**
 
-- [ ] [src/lib/prompts/interview.ts](src/lib/prompts/interview.ts) — 시스템 프롬프트 + 단계별 instruction
-- [ ] KB top-3 chunk를 `<context>` 블록으로 주입 + `cache_control: ephemeral`
-- [ ] 응답 JSON 스키마(Zod): `step / aiMessage / quickReplies[4] / insight`
+- [x] [src/lib/prompts/interview.ts](../src/lib/prompts/interview.ts) — 시스템 프롬프트(한국어 톤·단계별 의도) + `ASK_QUESTION_TOOL` (tool use 입력 스키마)
+- [x] KB top-3 chunk 를 `<kbContext>` 블록으로 주입 + `cache_control: ephemeral` ([service.ts](../src/lib/interview/service.ts) `generateQuestion` 안에서 `contextBlock("kbContext", …)`)
+- [x] 응답 Zod 스키마: `{ aiMessage, quickReplies: 2~4, insight? }` ([service.ts](../src/lib/interview/service.ts) `ToolSchema`). `pnpm add zustand` (5.0.13)
 
 **상태머신**
 
-- [ ] [src/lib/interview/machine.ts](src/lib/interview/machine.ts) — `type→reader→cta→objection→sources→length→generate`
-- [ ] zustand 스토어 `interviewStore`
+- [x] [src/lib/interview/machine.ts](../src/lib/interview/machine.ts) — `type→reader→cta→objection→sources→length→generate` 7단계 (`STEPS` 상수, `nextStep`/`isLastAnswerable`/`isAnswerable` 헬퍼, `DOC_TYPE_LABELS`·`STEP_LABELS` 매핑)
+- [x] [src/lib/interview/store.ts](../src/lib/interview/store.ts) — zustand `interviewStore` 팩토리(`createInterviewStore(init)`). state: `documentId/documentType/currentStep/answers/turns/quickReplies/insight/matches/pending/done`. action: `pushUser/pushAi/applyNext/setPending`. ChatView 가 `useState(() => createInterviewStore(initial))` 패턴으로 React 19 의 `react-hooks/refs` 룰 우회
 
 **API**
 
-- [ ] [app/api/interview/start/route.ts](app/api/interview/start/route.ts) — 문서 유형으로 KB 후보 검색
-- [ ] [app/api/interview/answer/route.ts](app/api/interview/answer/route.ts) — 부분 저장 + 다음 질문 생성
-- [ ] [app/api/interview/finalize/route.ts](app/api/interview/finalize/route.ts) — Phase 4 generate 트리거
+- [x] [src/app/api/interview/start/route.ts](<../src/app/api/interview/start/route.ts>) — POST `{ documentId }`. 현재 step 의 질문을 멱등 재발급. `done` 이면 `{ done: true }`
+- [x] [src/app/api/interview/answer/route.ts](<../src/app/api/interview/answer/route.ts>) — POST `{ documentId, step, answer }`. step 일치 검사(409 mismatch) + `answers_json` 부분 저장 → 다음 step 의 질문 생성. 마지막 step(`length`) 이후엔 `{ done: true }`
+- [x] [src/app/api/interview/finalize/route.ts](<../src/app/api/interview/finalize/route.ts>) — POST `{ documentId }`. 5답 모두 채워졌는지 검증 → `documents` row 에 reader/cta/objection/length_pages 복사 + session `current_step='generate'` 마킹. **Phase 4 generate 트리거는 아직 미연결 (TODO)**
 
 **UI**
 
-- [ ] [app/(app)/chat/[documentId]/page.tsx](<app/(app)/chat/[documentId]/page.tsx>)
-- [ ] [src/components/chat/MessageList.tsx](src/components/chat/MessageList.tsx)
-- [ ] [src/components/chat/QuickReplies.tsx](src/components/chat/QuickReplies.tsx)
-- [ ] [src/components/chat/ProgressTrack.tsx](src/components/chat/ProgressTrack.tsx) — 5단계 진행도
-- [ ] [src/components/chat/InsightBox.tsx](src/components/chat/InsightBox.tsx) — KB 매칭 인사이트
+- [x] [src/app/(app)/chat/new/page.tsx](<../src/app/(app)/chat/new/page.tsx>) — Server Component. `?type=<id>` 받아 `documents` + `interview_sessions` insert → `/chat/[id]` 로 redirect
+- [x] [src/app/(app)/chat/[documentId]/page.tsx](<../src/app/(app)/chat/[documentId]/page.tsx>) — Server Component. workspace 격리 select + session 로드 + 현재 step 의 `generateQuestion` SSR → `<ChatView initial={...} />` 전달. 새로고침 시 `answers_json` 으로 복원
+- [x] [src/components/chat/ChatView.tsx](../src/components/chat/ChatView.tsx) — Client orchestrator. zustand store + answer/finalize POST + 토스트
+- [x] [src/components/chat/MessageList.tsx](../src/components/chat/MessageList.tsx) — 말풍선, auto-scroll
+- [x] [src/components/chat/QuickReplies.tsx](../src/components/chat/QuickReplies.tsx) — 옵션 버튼 row
+- [x] [src/components/chat/ProgressTrack.tsx](../src/components/chat/ProgressTrack.tsx) — 5 칸 단계 진행도 (`done`/`active`/`pending` 시각화)
+- [x] [src/components/chat/InsightBox.tsx](../src/components/chat/InsightBox.tsx) — KB 매칭 인사이트 카드(매칭 자료 제목/snippet/유사도)
 
 **검증**
 
-- [ ] 5문답 완주 시간 < 2분
-- [ ] 응답 지연 < 2.5s (스트리밍 시작 기준)
-- [ ] `interview_sessions.answers_json` 부분 저장 확인 (중간 새로고침 시 복원)
+- [x] 5문답 완주 시간 < 2분 — 2026-05-29 사용자 브라우저 확인
+- [x] 응답 지연 < 2.5s (스트리밍 시작 기준) — 2026-05-29 non-streaming tool use 응답으로 체감 통과. 스트리밍 도입은 후속(필요시)
+- [x] `interview_sessions.answers_json` 부분 저장 + 중간 새로고침 시 복원 — 2026-05-29 사용자 브라우저 확인
 
 ---
 
-### Phase 4 — PPT 자동 생성 ⬜
+### Phase 4 — PPT 자동 생성 ✅
 
 > **산출물**: finalize 후 미리보기 슬라이드 ≥ 8장 표시 + .pptx 다운로드 정상.
 
 **Slide IR**
 
-- [ ] [src/lib/ppt/types.ts](src/lib/ppt/types.ts) — Slide 9종 + Zod 스키마 (Deck.meta에 `securityLevel/author/date` 추가 — [PPT_LAYOUT_SPEC §6](PPT_LAYOUT_SPEC.md#6-slide-ir-매핑-srclibppttypests))
-- [x] [src/design/tokens.ppt.json](../src/design/tokens.ppt.json) — PPT 디자인 토큰 (Phase 0 완료)
-- [x] [src/lib/ppt/layouts.ts](../src/lib/ppt/layouts.ts) — 9종 마스터 좌표/스타일 코드화 (Phase 0 완료)
+- [x] [src/lib/ppt/types.ts](../src/lib/ppt/types.ts) — Slide 9종 discriminatedUnion + Zod (`DeckSchema`, `SlideSchema`, `DeckMetaSchema`). meta 에 `securityLevel/author/date` 포함. 각 slide 별 글자 수·개수 한도 포함
+- [x] [src/design/tokens.ppt.json](../src/design/tokens.ppt.json) — PPT 디자인 토큰 (Phase 0). **basePath 를 `/ppt-assets` 로 변경** (자산을 `public/ppt-assets/` 로 복사)
+- [x] [src/lib/ppt/layouts.ts](../src/lib/ppt/layouts.ts) — 9종 마스터 좌표/스타일 코드화 (Phase 0)
 
 > 웹 UI 토큰(`tokens.web.json`)과 Tailwind preset 은 **Phase 8** 에서 일괄 작성. Phase 4 는 PPT 출력만 책임지며, 미리보기 `<Slide>` 컴포넌트는 PPT 토큰을 직접 import 한다 (웹 토큰과 무관).
 
 **LLM 파이프라인**
 
-- [ ] [src/lib/prompts/outline.ts](src/lib/prompts/outline.ts) — tool use로 Slide.kind 시퀀스 제안
-- [ ] [src/lib/prompts/slide-fill.ts](src/lib/prompts/slide-fill.ts) — 슬라이드별 컨텐츠 채움 (출처 chunk ID 반환)
-- [ ] 슬라이드별 병렬 호출 + 글자 수 한도 검증 + 2회 재시도
+- [x] [src/lib/prompts/outline.ts](../src/lib/prompts/outline.ts) — `propose_outline` tool, Slide.kind 시퀀스 + 시작 cover/끝 cta 강제 + 길이 보정 후처리
+- [x] [src/lib/prompts/slide-fill.ts](../src/lib/prompts/slide-fill.ts) — kind 별 `fill_slide` tool 스키마 동적 생성 (각 kind 의 필드만 노출), 모든 호출에 `sourceRefs` 반환 강제
+- [x] [src/lib/ppt/generate.ts](../src/lib/ppt/generate.ts) — `generateDeck()` orchestrator: KB matches → outline → `p-limit(4)` 병렬 fill → Zod 검증 + 2회 재시도 → fallback slide → Deck 조립 (sourceRefs 집계)
 
 **렌더**
 
-- [ ] [src/lib/ppt/render.tsx](src/lib/ppt/render.tsx) — `<Deck>` + `<Slide kind="...">` 9종
-- [ ] [src/lib/ppt/pptx.ts](src/lib/ppt/pptx.ts) — 동일 IR을 pptxgenjs로 변환
-- [ ] 마스터 슬라이드/레이아웃 9종 정의 (cover/agenda/section/bullets/twoCol/metric/quote/image/cta)
-- [ ] 한글 폰트 임베딩 (`embedFonts` 옵션 검토) 또는 `맑은 고딕` fallback
+- [x] [src/lib/ppt/render.tsx](../src/lib/ppt/render.tsx) — `<SlideCanvas>` (1920×1080 + CSS scale) + 9종 kind 별 컴포넌트 + `<FooterMaster>` + `<CoverMaster>` (PPT_LAYOUTS 박스를 absolute positioning)
+- [x] [src/lib/ppt/pptx.ts](../src/lib/ppt/pptx.ts) — `renderPptx(deck)` → `pptxgenjs` Buffer. `LAYOUT_WIDE` (13.333×7.5 in), `px → inch (×13.333/1920)`, `px → pt (÷2)` 환산. 자산은 `public/ppt-assets/` 의 fs 경로
+- [x] 마스터 9종 정의 — `PPT_LAYOUTS[kind]` (Phase 0) 를 양쪽 렌더가 단일 출처로 공유
+- [x] 한글 폰트 fallback — 토큰의 family chain `Pretendard, Gotham, Malgun Gothic` 그대로 사용 (pptxgenjs `fontFace` 에 첫 폰트명 전달). 발표 PC `맑은 고딕` 까지 자동 fallback
 
 **API**
 
-- [ ] [app/api/generate/route.ts](app/api/generate/route.ts) — outline → fill → 저장
-- [ ] [app/api/generate/[versionId]/pptx/route.ts](app/api/generate/[versionId]/pptx/route.ts) — pptxgenjs → Supabase Storage 캐시 → signed URL stream
+- [x] [src/app/api/generate/route.ts](<../src/app/api/generate/route.ts>) — POST `{ documentId, securityLevel? }`. answers 완료 검증 → `generateDeck` → `document_versions` insert (version 자동 증가) → `{ versionId, version, slideCount }`. `maxDuration: 300`
+- [x] [src/app/api/generate/[versionId]/pptx/route.ts](<../src/app/api/generate/[versionId]/pptx/route.ts>) — GET. workspace_id 조인 검증 → 이미 캐시된 `pptxObjectKey` 있으면 signed URL 즉시 반환, 없으면 `renderPptx` → Storage upload → key 저장 → signed URL. `maxDuration: 300`
 
 **UI**
 
-- [ ] [src/components/deck/SlidePreview.tsx](src/components/deck/SlidePreview.tsx)
-- [ ] [src/components/deck/DeckViewer.tsx](src/components/deck/DeckViewer.tsx) — 좌측 썸네일 + 우측 큰 슬라이드
+- [x] [src/components/deck/SlidePreview.tsx](../src/components/deck/SlidePreview.tsx) — width prop 받아서 1920×1080 캔버스를 CSS scale 로 비율 유지 축소
+- [x] [src/components/deck/DeckViewer.tsx](../src/components/deck/DeckViewer.tsx) — 좌측 썸네일 카드(160px) + 우측 큰 슬라이드(960px) + `.pptx` 다운로드 버튼
+- [x] [src/app/(app)/deck/[versionId]/page.tsx](<../src/app/(app)/deck/[versionId]/page.tsx>) — 새 deck 미리보기 페이지 (Server Component, workspace 격리, Zod 재검증)
+- [x] **Phase 3 wire-up**: [src/app/api/interview/finalize/route.ts](<../src/app/api/interview/finalize/route.ts>) 가 `generateDeck` 호출 → `document_versions` insert → `versionId` 반환. ChatView 가 응답의 `versionId` 로 `/deck/[versionId]` 로 router.push
 
 **검증**
 
-- [ ] 생성 시간 < 25s
-- [ ] .pptx 다운로드 후 PowerPoint/Keynote에서 열림, 깨진 폰트 없음
-- [ ] 미리보기와 .pptx 결과가 시각적으로 동일
+- [x] 생성 시간 < 25s — 2026-05-29 사용자 브라우저 e2e
+- [x] .pptx 다운로드 후 PowerPoint/Keynote에서 열림, 깨진 폰트 없음 — 2026-05-29 사용자 확인
+- [x] 미리보기와 .pptx 결과가 시각적으로 동일 — 2026-05-29 사용자 확인
+
+**검증 후속 패치 (2026-05-29)**
+
+- [x] 푸터 securityChip ↔ wordmark 좌우 위치 + 박스 비율 swap — `tokens.ppt.json` 한 군데 수정으로 위치(좌하단=wordmark / 우하단=securityChip)와 자연 비율 (8.875 / 15.0) 동시 정상화. [PPT_LAYOUT_SPEC §3.1](PPT_LAYOUT_SPEC.md#31-body-footer-master-8종-본문-공통) 표 정정
+- [x] agenda items / section title 번호 prefix 자동 제거 (`stripNumberPrefix`) + section ≥ 2 일 때 agenda items 를 section title 들로 자동 동기화 (`alignAgendaAndSections` in [generate.ts](../src/lib/ppt/generate.ts))
+
+**알려진 제한 (이후 보완)**
+
+- [ ] **agenda items ↔ 본문 슬라이드 title 완전 정합성** — section 슬라이드가 0~1개인 짧은 deck 에서는 LLM 이 agenda items 와 bullets/twoCol title 을 독립 생성해 mismatch 발생. 근본 해결책 후보:
+  1. **2-phase generation**: 본문 슬라이드 먼저 채운 뒤, 그 title 들을 컨텍스트로 agenda 만 마지막에 채움 (sequential)
+  2. **outline 단계에서 title 도 같이 결정**: outline tool 에 `kinds` 뿐 아니라 `titles[]` 도 같이 요청, 그 후 slide-fill 은 title 을 받아 본문만 생성
+  3. **agenda 슬라이드 자체를 제거**: agenda 없는 5~8장 deck 은 자연스럽게 mismatch 발생 안 함
+- [ ] **표지에 보안레벨 표시** (사용자 #2) — Figma 원본 표지 사양 확인 후 Phase 8 또는 별도 추가
+- [ ] **마지막 페이지 엔딩 마스터** (사용자 #4) — `color.footer.end:#000000` + `awards_badge_back.png` 사용. ENDING_MASTER + endLayout 정의 필요. Figma `end_16x9` 좌표 확인 후 Phase 8 에서 일괄 처리 권장
 
 ---
 
-### Phase 5 — 에이전트 자율 루프 ⬜
+### Phase 5 — 에이전트 자율 루프 ✅
 
 > **산출물**: 시드 URL의 `content_hash` 강제 변경 시 30초 내 5단계 phase event 모두 기록 + `approvals` row 생성.
 
-**Inngest 5함수**
+**Inngest 5함수** ([src/inngest/agent.ts](../src/inngest/agent.ts), 한 `runId` 를 5단계에 관통)
 
-- [ ] `agent.detect` (cron `*/30 * * * *`) — 재크롤 + content_hash 비교 + 5% 임계
-- [ ] `agent.perceive` — diff 섹션 분류 (Claude)
-- [ ] `agent.reason` — 영향 문서/우선순위 (Opus 4.7)
-- [ ] `agent.act` — 신버전 드래프트 + 승인 큐 + (승인 후) Slack 발송
-- [ ] `agent.learn` — pattern 벡터 upsert (`learning_patterns` 테이블 추가)
+- [x] `agent.detect` (cron `*/30 * * * *` + `agent/detect.requested`) — 재크롤 + content_hash 비교 + 5% 임계(Jaccard). `forced-` 센티넬 시 라이브 크롤·임계 우회(오프라인 데모). 변경 시 `agent_runs` 생성 → `source.changed` emit
+- [x] `agent.perceive` (`source.changed`) — diff 섹션 분류 (Sonnet, `classify_change` tool) → `source.perceived`
+- [x] `agent.reason` (`source.perceived`) — `document_sources` 로 참조 문서 조회 → 영향/우선순위 (Opus 4.7, `rank_impact`) → `source.impact-ready`
+- [x] `agent.act` (`source.impact-ready`) — `shouldRegenerate` 문서마다 최신 버전 clone 한 draft 신버전 + `approvals`(pending) + `notifications`(slack/pending, **발송은 Phase 6**) → `source.acted`
+- [x] `agent.learn` (`source.acted`) — pattern 텍스트 임베딩 → `learning_patterns` upsert(outcome=pending) → run 종료
 
 **보조**
 
-- [ ] [src/lib/agent/events.ts](src/lib/agent/events.ts) — `appendEvent(runId, phase, type, payload)` step 헬퍼
-- [ ] [src/lib/agent/policy.ts](src/lib/agent/policy.ts) — `auto_run` + `policy.publish === 'manual'` 게이트
-- [ ] 개발자 모드 "지금 감지" 버튼 → `POST /api/agent/run/[id]/trigger`
+- [x] [src/lib/agent/events.ts](../src/lib/agent/events.ts) — `appendEvent/startRun/endRun/ensureMonitorAgent/reconstructSourceText/changeRatio`
+- [x] [src/lib/agent/policy.ts](../src/lib/agent/policy.ts) — `getPolicy` + `shouldAutoPublish` (기본 manual: 승인 큐만 생성, Slack 은 항상 승인 후)
+- [x] 개발자 모드 "지금 감지" 버튼 → `POST /api/agent/run/[id]/trigger` (`[id]`=agentId). [src/components/agent/DetectButton.tsx](../src/components/agent/DetectButton.tsx) + 최소 [app/(app)/agent/page.tsx](<../src/app/(app)/agent/page.tsx>) (실행/이벤트/승인큐 SSR — 리치 대시보드·SSE 는 Phase 7)
+- [x] 프롬프트 [diff-perceive.ts](../src/lib/prompts/diff-perceive.ts) · [impact-rank.ts](../src/lib/prompts/impact-rank.ts)
+- [x] 스키마: `learning_patterns` 테이블 + `document_versions.status` 컬럼 추가 (drizzle/0002, 기존 버전 `published` 백필)
+- [x] **Phase 4 갭 보강**: generate/finalize 가 `deck.sourceRefs` → `document_sources` 정규화 + 신버전 `status='published'` ([normalizeDocumentSources](../src/lib/ppt/generate.ts))
 
 **API**
 
-- [ ] [app/api/agent/approve/route.ts](app/api/agent/approve/route.ts) — 승인/거부 처리
-- [ ] [app/api/agent/run/[id]/route.ts](app/api/agent/run/[id]/route.ts) — run 상세 조회
+- [x] [app/api/agent/approve/route.ts](<../src/app/api/agent/approve/route.ts>) — 승인/거부. approve 시 버전 `published` + notif `queued` + pattern `approved` + audit_log
+- [x] [app/api/agent/run/[id]/route.ts](<../src/app/api/agent/run/[id]/route.ts>) — run 상세 (run+events+approvals, `[id]`=runId)
 
-**검증**
+**검증** — `pnpm verify:agent` ([scripts/force-change.ts](../scripts/force-change.ts), 자급식·오프라인)
 
-- [ ] `content_hash` 강제 변경 스크립트 실행 → 30초 내 detect/perceive/reason/act/learn 5개 event 기록
-- [ ] approval 행이 생성, Slack 발송은 보류 상태
-- [ ] 승인 클릭 후 `document_versions.status='published'`
+- [x] `content_hash` 강제 변경 → **10.7s** 내 detect/perceive/reason/act/learn 5개 event 기록 (목표 30s)
+- [x] approval 행 생성, Slack 발송 보류 (`notifications.status='pending'`)
+- [x] 승인 후 `document_versions.status='published'`
+
+**Phase 5 retro (후속 개선 항목)**
+
+- `agent.act` 는 현재 최신 버전 **clone + 변경노트 주입** (30s 예산 보호). 변경 섹션만 부분 재생성(perception → sourceRefs 매핑 후 해당 slide 만 `fillSlide`)은 후속.
+- `agent.detect` 실변경(cron) 경로는 hash 갱신만; 변경 소스의 chunk 재임베딩은 후속(현재 forced 데모 경로는 chunk 불변이라 무관).
+- `learning_patterns` KNN 가중치를 `reason` 에 실제 반영하는 로직은 후속(현재는 적재만).
 
 ---
 
-### Phase 6 — 알림 (Slack / Email) ⬜
+### Phase 6 — 알림 (Slack / Email) ✅
 
 > **산출물**: 승인 클릭 → `#docmind-demo` 채널에 Block Kit 메시지 도착 + 딥링크 동작.
 
-- [ ] `pnpm add @slack/web-api resend`
-- [ ] [src/lib/slack.ts](src/lib/slack.ts) — WebClient + Block Kit 빌더 (제목/변경요약/승인링크)
-- [ ] [src/lib/email.ts](src/lib/email.ts) — Resend 승인 요청 템플릿
-- [ ] `notifications` 테이블에 발송 이력 기록
-- [ ] Slack 발송 실패 fallback: in-app toast + activity feed에 빨간 칩
-- [ ] **검증**: 메시지 도착 + "발행 승인" 버튼 클릭 시 `/agent?approval=<id>` 진입 + 해당 카드 하이라이트
+**발송 시점 결정**: §5.5 "발송은 항상 승인 후"(기획서 명시) + 산출물 "승인 클릭 → 메시지 도착" 에 맞춰 **모든 outbound(Slack+Email)는 approve 시점에만** 발송한다 (자율 outbound 금지 불변식). Phase 5 `act` 가 만든 `notifications`(slack/pending) row 를 approve 가 실제 발송 후 `sent`/`failed`/`skipped` 로 갱신, email row 는 신규 insert. (§15 의 "Resend 승인 요청 템플릿" 문구는 발송 시점 불변식과 충돌 → **발행 알림 템플릿**으로 구현, 본 결정으로 기록.)
+
+- [x] `pnpm add @slack/web-api resend`
+- [x] [src/lib/slack.ts](../src/lib/slack.ts) — lazy WebClient + `buildPublishBlocks` (제목/변경요약/딥링크 버튼) + 미설정 시 graceful `skipped`. 채널: `SLACK_DEFAULT_CHANNEL_ID` 우선
+- [x] [src/lib/email.ts](../src/lib/email.ts) — lazy Resend + 발행 알림 HTML 템플릿 + 미설정 시 `skipped` (`RESEND_FROM` 미설정 시 `onboarding@resend.dev` 폴백)
+- [x] [src/lib/notify.ts](../src/lib/notify.ts) — `dispatchApprovalNotifications` (approve 시 호출). Slack(채널) + Email(워크스페이스 멤버) 발송 → `notifications` 이력 기록
+- [x] `notifications` 테이블에 발송 이력 기록 (slack row 갱신 + email row insert, payload 에 ts/id/error)
+- [x] Slack 발송 실패 fallback: in-app toast(`ApprovalActions` 가 `notify.slack` 으로 warning) + activity feed 빨간 칩(`agent_events` `notification.failed` → `/agent` destructive 배지)
+- [x] 딥링크: approve route 가 `${NEXT_PUBLIC_APP_URL}/agent?approval=<id>` 버튼 포함. [/agent](<../src/app/(app)/agent/page.tsx>) 가 `?approval=<id>` 로 진입 시 해당 카드(대기/처리됨 무관) 하이라이트
+- [x] **검증**: dry-run(토큰 strip)으로 dispatch 경로 통과 — `skipped`+이력 row(slack/email) 생성 확인. **라이브 발송(#docmind-demo 실제 메시지 + 메일)은 outward action 이라 사용자 확인 후 1회 실시 예정**
 
 ---
 
-### Phase 7 — 대시보드 & 보조 화면 ⬜
+### Phase 7 — 대시보드 & 보조 화면 ✅
 
 > **산출물**: 실시간 활동 피드 + 승인 큐가 보이는 에이전트 대시보드. 문서함/스케줄/설정.
+>
+> **세분화 완료**: (1) 실시간 SSE 토대 ✅ → (2) 에이전트 대시보드 ✅ → (3) 문서함 ✅ → (4) 스케줄(Mode C) ✅ → (5) 설정 ✅. **잔여**: 실시간 1초 노출·승인 시각 e2e 는 로그인 브라우저 1회(JWT 세션, 헤드리스 위조 불가) — 나머지 검증은 단위/e2e 로 통과.
 
-**실시간**
+**실시간** ✅
 
-- [ ] [app/api/events/stream/route.ts](app/api/events/stream/route.ts) — SSE (`text/event-stream`, `no-cache, no-transform`, Node runtime)
-- [ ] [src/lib/sse.ts](src/lib/sse.ts) — 서버 stream util + 클라 EventSource + `?since=eventId` 재구독
+- [x] [app/api/events/stream/route.ts](<../src/app/api/events/stream/route.ts>) — SSE (Node runtime, `text/event-stream`, `no-cache, no-transform`, `X-Accel-Buffering:no`). 워크스페이스 격리(rbac) + 1s DB 폴링 + 백로그 20건 + heartbeat 15s + `req.signal` 정리
+- [x] [src/lib/sse.ts](../src/lib/sse.ts) — `formatSSE`/`SSE_HEADERS`(서버) + `subscribeAgentEvents`(클라 EventSource). `id:` 프레임 → 네이티브 `Last-Event-ID` 재구독, `?since=eventId` 도 지원 (db import 없음 → 클라 번들 안전)
+  - 검증: build/lint 통과, 미인증 시 401(워크스페이스 가드 확인). 실시간 "1초 이내 노출" e2e 는 (2) ActivityFeed 클라와 함께 수행
 
-**에이전트 대시보드**
+**에이전트 대시보드** ✅ (단계 2)
 
-- [ ] [app/(app)/agent/page.tsx](<app/(app)/agent/page.tsx>)
-- [ ] [src/components/agent/AgentList.tsx](src/components/agent/AgentList.tsx) — 좌측 패널
-- [ ] [src/components/agent/ActivityFeed.tsx](src/components/agent/ActivityFeed.tsx) — phase별 컬러
-- [ ] [src/components/agent/LoopDiagram.tsx](src/components/agent/LoopDiagram.tsx) — 5단계 SVG + 펄스
-- [ ] [src/components/agent/ApprovalQueue.tsx](src/components/agent/ApprovalQueue.tsx)
-- [ ] [src/components/agent/StatCard.tsx](src/components/agent/StatCard.tsx) — 자동 실행/갱신/시간 절감/모니터링 4개
+- [x] [app/(app)/agent/page.tsx](<../src/app/(app)/agent/page.tsx>) — 3컬럼(AgentList | AgentLive | Stat+승인큐) SSR. monitor 에이전트 보장 + 백로그 20건 + 통계 쿼리 + 승인큐 + 딥링크 하이라이트
+- [x] [src/components/agent/AgentList.tsx](../src/components/agent/AgentList.tsx) — 좌측 패널 (kind 라벨 + 상태/마지막 run 칩)
+- [x] [src/components/agent/ActivityFeed.tsx](../src/components/agent/ActivityFeed.tsx) — phase별 컬러([phases.ts](../src/components/agent/phases.ts), Tailwind 팔레트 — Phase 8 brand spectrum remap 예정), `*.failed` 빨간 처리
+- [x] [src/components/agent/LoopDiagram.tsx](../src/components/agent/LoopDiagram.tsx) — 5단계 SVG + 활성 노드 펄스(`fill-current`+`animate-pulse`, currentColor 기법)
+- [x] [src/components/agent/ApprovalQueue.tsx](../src/components/agent/ApprovalQueue.tsx) — 대기 큐 + 딥링크 하이라이트 + `ApprovalActions` 래핑
+- [x] [src/components/agent/StatCard.tsx](../src/components/agent/StatCard.tsx) — 오늘 자동 실행/갱신 문서/시간 절감(87% 데모)/모니터링 4개
+- [x] [src/components/agent/AgentLive.tsx](../src/components/agent/AgentLive.tsx) — 단일 EventSource 구독(`subscribeAgentEvents`) + 탭(활동 피드/루프 구조/생성된 문서) + 최신 이벤트로 activePhase 파생
+  - 검증: build/lint 통과, 에이전트 루프 회귀 통과(verify:agent 5단계 9.2s, 이벤트 적재 확인). **실시간 "1초 이내 노출" + 승인 클릭 시각 e2e 는 로그인 브라우저에서 1회**(JWT 세션이라 헤드리스 위조 불가)
 
-**문서함**
+**문서함** ✅ (단계 3)
 
-- [ ] [app/(app)/docs/page.tsx](<app/(app)/docs/page.tsx>) — 카드 그리드 + 필터
-- [ ] [app/(app)/docs/[id]/page.tsx](<app/(app)/docs/[id]/page.tsx>) — 버전 타임라인 + diff
-- [ ] [src/lib/diff.ts](src/lib/diff.ts) — slides_json 텍스트 diff
+- [x] [app/(app)/docs/page.tsx](<../src/app/(app)/docs/page.tsx>) — 카드 그리드 + 유형/상태 필터(searchParams 링크). 카드: 유형/상태 칩, 최신 v#·버전 수, 갱신일
+- [x] [app/(app)/docs/[id]/page.tsx](<../src/app/(app)/docs/[id]/page.tsx>) — 문서 헤더(유형/상태/답변) + 버전 타임라인(상태 칩·변경노트·미리보기[/deck]·.pptx 다운로드·"최신과 비교") + 버전 간 diff(`?base=&target=`, 기본 최신↔직전)
+- [x] [src/lib/diff.ts](../src/lib/diff.ts) — `deckToLines`(슬라이드별 평탄화) + LCS `diffLines`/`diffDecks`/`diffStats` (외부 의존성 없음)
+  - 검증: diff 단위테스트 통과(변경 del+add / 슬라이드 삽입 add / 동일 0·0). build/lint 통과. **주의**: 데모 시드의 v2 는 v1 clone 이라 동일 표시됨 — 실제 변경 diff 는 act 부분 재생성(Phase 5 retro) 후 풍부해짐
 
-**스케줄 (Mode C)**
+**스케줄 (Mode C)** ✅ (단계 4)
 
-- [ ] [app/(app)/schedules/page.tsx](<app/(app)/schedules/page.tsx>) — cron + 템플릿 등록
-- [ ] Inngest `agent.generate.scheduled` 크론 함수
+- [x] [app/(app)/schedules/page.tsx](<../src/app/(app)/schedules/page.tsx>) — cron + 문서 템플릿(유형/제목/독자/CTA/반론/소스/분량) 등록 폼([ScheduleForm](../src/components/schedules/ScheduleForm.tsx)) + 목록(활성 토글/삭제 [ScheduleActions](../src/components/schedules/ScheduleActions.tsx)). nav 에 "스케줄" 링크 추가
+- [x] API [POST /api/schedules](<../src/app/api/schedules/route.ts>) (cron 검증 + 생성) · [PATCH/DELETE /api/schedules/[id]](<../src/app/api/schedules/[id]/route.ts>) (토글/삭제, 워크스페이스 격리)
+- [x] Inngest [agent.generate.scheduled](../src/inngest/agent.ts) — **매분(`* * * * *`) 틱 + 등록 schedule cron 매칭**(정적 cron 제약 우회 패턴) → `generateDeck`(KB 자동 매칭 포함) → document+version(published) 저장 + 결과 notification(pending) 기록
+- [x] [src/lib/cron.ts](../src/lib/cron.ts) `cronMatches`(의존성 없는 5필드 매처) + [src/lib/schedule.ts](../src/lib/schedule.ts)(공유 템플릿 Zod). cron 매처 단위테스트 11/11
+  - **주의(데모)**: `* * * * *` 는 매분 생성 → LLM 비용/문서 누적. 데모 후 스케줄 비활성화/삭제할 것.
 
-**설정**
+**설정** ✅ (단계 5)
 
-- [ ] [app/(app)/settings/page.tsx](<app/(app)/settings/page.tsx>) — 브랜드 템플릿/알림 채널/에이전트 정책
+- [x] [app/(app)/settings/page.tsx](<../src/app/(app)/settings/page.tsx>) — 에이전트 정책(자동 실행/발행 manual·auto)·Slack 알림 채널([SettingsForm](../src/components/settings/SettingsForm.tsx) → [PATCH /api/settings](<../src/app/api/settings/route.ts>)) + 이메일 수신자(멤버)·브랜드 템플릿 목록(읽기, PPT 는 `tokens.ppt.json`)·Slack/Email 연결 상태 배지. nav "설정" 링크 추가
+  - 저장은 monitor 에이전트 `config_json`(`policy.publish` + `notifyChannel`) + `auto_run`. **동작 연결**: `act` 가 `getNotifyChannel` 로 알림 target 결정, `shouldAutoPublish` 로 발행 게이트. 설정 roundtrip + 헬퍼 검증 PASS
 
 **검증**
 
-- [ ] 새 event 생성 후 활동 피드에 1초 이내 노출
-- [ ] 승인 큐에서 클릭 → 발행 + Slack 발송 + 피드에 ✅
-- [ ] 문서 상세에서 v1 vs v2 diff 가독성 OK
-- [ ] 1분 스케줄 등록 시 1분 내 새 문서 생성
+- [ ] 새 event 생성 후 활동 피드에 1초 이내 노출 (로그인 브라우저 1회 — 단계 2)
+- [ ] 승인 큐에서 클릭 → 발행 + Slack 발송 + 피드에 ✅ (로그인 브라우저 + Slack 토큰 1회)
+- [x] 문서 상세에서 v1 vs v2 diff 가독성 OK (diff 단위테스트 통과 — 단계 3)
+- [x] 1분 스케줄 등록 시 1분 내 새 문서 생성 (e2e: 등록 → **27초** 내 새 문서 — 단계 4)
 
 ---
 

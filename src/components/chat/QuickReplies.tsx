@@ -22,6 +22,7 @@ export function QuickReplies({
           size="sm"
           disabled={disabled}
           onClick={() => onPick(opt)}
+          className="rounded-full border-hairline px-4 text-steel hover:bg-surface hover:text-ink"
         >
           {opt}
         </Button>

@@ -90,6 +90,57 @@ export function ChatView({ initial }: { initial: InitialChatState }) {
     }
   };
 
+  const goto = async (step: AnswerableStep) => {
+    if (useStore.getState().pending) return;
+    useStore.getState().setPending(true);
+    try {
+      const res = await fetch("/api/interview/step", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentId: state.documentId, step }),
+      });
+      const body = (await res.json().catch(() => ({}))) as Record<
+        string,
+        unknown
+      >;
+      if (!res.ok) {
+        throw new Error(
+          typeof body.error === "string" ? body.error : `HTTP ${res.status}`,
+        );
+      }
+      const data = body as {
+        step: string;
+        answers: Record<string, string>;
+        question?: {
+          aiMessage: string;
+          quickReplies: string[];
+          insight?: string;
+          matches: Array<{
+            sourceId: string;
+            title: string | null;
+            text: string;
+            sim: number;
+          }>;
+        };
+        previousAnswer?: string;
+      };
+      if (!data.question) throw new Error("질문을 불러오지 못했습니다.");
+      useStore.getState().gotoStep({
+        step: data.step as AnswerableStep,
+        answers: data.answers,
+        aiMessage: data.question.aiMessage,
+        quickReplies: data.question.quickReplies,
+        insight: data.question.insight,
+        matches: data.question.matches,
+      });
+      setInput(data.previousAnswer ?? "");
+    } catch (err) {
+      toast.error(`단계 이동 실패: ${(err as Error).message}`);
+    } finally {
+      useStore.getState().setPending(false);
+    }
+  };
+
   const finalize = async () => {
     useStore.getState().setPending(true);
     try {
@@ -124,8 +175,13 @@ export function ChatView({ initial }: { initial: InitialChatState }) {
     <main className="mx-auto grid max-w-6xl gap-6 px-6 py-8 lg:grid-cols-[1fr_320px]">
       <section className="flex flex-col gap-4">
         <header className="flex flex-col gap-3">
-          <h1 className="text-xl font-semibold tracking-tight">{typeLabel}</h1>
-          <ProgressTrack currentStep={state.currentStep} />
+          <h1 className="font-heading text-heading-4 text-ink">{typeLabel}</h1>
+          <ProgressTrack
+            currentStep={state.currentStep}
+            answers={state.answers}
+            onGoto={goto}
+            disabled={state.pending}
+          />
         </header>
 
         <div className="flex-1 rounded-lg border bg-card px-4">

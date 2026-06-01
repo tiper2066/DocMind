@@ -51,10 +51,10 @@ export default async function KbPage() {
   const anyCrawling = rows.some((s) => s.status === "crawling");
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-10">
+    <main className="mx-auto max-w-6xl px-6 py-8">
       <div className="mb-8 flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">지식 베이스</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="font-heading text-heading-3 text-ink">지식 베이스</h1>
+        <p className="text-body-sm text-steel">
           사내 URL · 파일을 등록하면 AI 가 학습합니다.
         </p>
       </div>

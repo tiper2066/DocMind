@@ -87,12 +87,11 @@ export function AgentLive({
                   <span className="text-muted-foreground">v{v.version}</span>
                 </span>
                 <Badge
-                  variant={
+                  variant={v.status === "rejected" ? "destructive" : "outline"}
+                  className={
                     v.status === "published"
-                      ? "secondary"
-                      : v.status === "rejected"
-                        ? "destructive"
-                        : "outline"
+                      ? "border-transparent bg-success text-on-primary"
+                      : undefined
                   }
                 >
                   {v.status === "published"

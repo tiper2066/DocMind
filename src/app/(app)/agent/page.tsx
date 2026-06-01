@@ -196,8 +196,8 @@ export default async function AgentPage({
     <main className="mx-auto max-w-6xl px-6 py-8">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">에이전트</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="font-heading text-heading-3 text-ink">에이전트</h1>
+          <p className="mt-1 text-body-sm text-steel">
             소스 변경을 감지하고 5단계(감지→인식→판단→행동→학습)로 문서를 갱신합니다.
           </p>
         </div>
@@ -211,10 +211,30 @@ export default async function AgentPage({
 
         <aside className="space-y-6">
           <div className="grid grid-cols-2 gap-3">
-            <StatCard label="오늘 자동 실행" value={`${runsToday}`} hint="최근 24h" />
-            <StatCard label="갱신 문서" value={`${publishedCount}`} hint="발행됨" />
-            <StatCard label="시간 절감" value="87%" hint={`~${savedHours}h`} />
-            <StatCard label="모니터링" value={`${monitored}`} hint="URL 소스" />
+            <StatCard
+              label="오늘 자동 실행"
+              value={`${runsToday}`}
+              hint="최근 24h"
+              accent="text-brand"
+            />
+            <StatCard
+              label="갱신 문서"
+              value={`${publishedCount}`}
+              hint="발행됨"
+              accent="text-brand-green"
+            />
+            <StatCard
+              label="시간 절감"
+              value="87%"
+              hint={`~${savedHours}h`}
+              accent="text-brand-orange-deep"
+            />
+            <StatCard
+              label="모니터링"
+              value={`${monitored}`}
+              hint="URL 소스"
+              accent="text-link-blue"
+            />
           </div>
           <ApprovalQueue
             pending={pending}

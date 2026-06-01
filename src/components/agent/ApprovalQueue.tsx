@@ -34,13 +34,13 @@ export function ApprovalQueue({
           </div>
           <Badge
             variant={
-              highlighted.decision === "approve"
-                ? "secondary"
-                : highlighted.decision === "reject"
-                  ? "destructive"
-                  : "outline"
+              highlighted.decision === "reject" ? "destructive" : "outline"
             }
-            className="mt-2"
+            className={
+              highlighted.decision === "approve"
+                ? "mt-2 border-transparent bg-success text-on-primary"
+                : "mt-2"
+            }
           >
             {highlighted.decision === "approve"
               ? "발행 승인됨"

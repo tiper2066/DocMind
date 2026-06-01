@@ -7,6 +7,7 @@ import { documents, documentVersions } from "@/db/schema";
 import { getWorkspaceContext } from "@/lib/rbac";
 import { DOC_TYPE_LABELS } from "@/lib/interview/machine";
 import { Badge } from "@/components/ui/badge";
+import { DocActions } from "@/components/docs/DocActions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -68,8 +69,8 @@ export default async function DocsPage({
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-8">
-      <h1 className="text-2xl font-semibold tracking-tight">문서함</h1>
-      <p className="mb-6 text-sm text-muted-foreground">
+      <h1 className="font-heading text-heading-3 text-ink">문서함</h1>
+      <p className="mt-1 mb-6 text-body-sm text-steel">
         생성·갱신된 문서와 버전 이력을 확인합니다.
       </p>
 
@@ -103,10 +104,10 @@ export default async function DocsPage({
           {docs.map((d) => {
             const a = aggByDoc.get(d.id);
             return (
-              <li key={d.id}>
+              <li key={d.id} className="relative">
                 <Link
                   href={`/docs/${d.id}`}
-                  className="block rounded-lg border p-4 transition-colors hover:bg-muted/50"
+                  className="block rounded-lg bg-canvas p-4 pr-12 ring-1 ring-hairline transition duration-200 hover:-translate-y-0.5 hover:bg-surface hover:shadow-elevation-2"
                 >
                   <div className="mb-2 flex items-center gap-2">
                     <Badge variant="secondary">
@@ -122,6 +123,9 @@ export default async function DocsPage({
                     {d.updatedAt.toLocaleDateString("ko-KR")}
                   </div>
                 </Link>
+                <div className="absolute top-3 right-3 z-10">
+                  <DocActions docId={d.id} title={d.title} />
+                </div>
               </li>
             );
           })}

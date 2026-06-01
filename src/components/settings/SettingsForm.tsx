@@ -5,9 +5,18 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-const selectCls =
-  "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
+const PUBLISH_ITEMS: Record<string, string> = {
+  manual: "manual (수동 승인)",
+  auto: "auto (자동 발행)",
+};
 
 export function SettingsForm({
   initial,
@@ -53,24 +62,31 @@ export function SettingsForm({
           type="checkbox"
           checked={autoRun}
           onChange={(e) => setAutoRun(e.target.checked)}
-          className="size-4"
+          className="size-4 accent-brand"
         />
       </label>
 
-      <label className="block space-y-1">
-        <span className="text-sm font-medium">발행 정책</span>
+      <div className="space-y-1">
+        <span className="block text-sm font-medium">발행 정책</span>
         <span className="block text-xs text-muted-foreground">
           manual = 승인 큐만 생성 / auto = 자동 발행. Slack·메일은 정책과 무관하게 항상 승인 후 발송.
         </span>
-        <select
+        <Select
+          items={PUBLISH_ITEMS}
           value={publish}
-          onChange={(e) => setPublish(e.target.value as "manual" | "auto")}
-          className={`${selectCls} mt-1`}
+          onValueChange={(v: string | null) =>
+            setPublish((v as "manual" | "auto") ?? "manual")
+          }
         >
-          <option value="manual">manual (수동 승인)</option>
-          <option value="auto">auto (자동 발행)</option>
-        </select>
-      </label>
+          <SelectTrigger className="mt-1" aria-label="발행 정책">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="manual">manual (수동 승인)</SelectItem>
+            <SelectItem value="auto">auto (자동 발행)</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
       <label className="block space-y-1">
         <span className="text-sm font-medium">Slack 알림 채널</span>

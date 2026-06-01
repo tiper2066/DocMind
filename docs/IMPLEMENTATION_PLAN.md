@@ -871,57 +871,70 @@ SENTRY_DSN=
 
 ---
 
-### Phase 8 — UI 디자인 시스템 적용 ([DESIGN.md](DESIGN.md)) ⬜
+### Phase 8 — UI 디자인 시스템 적용 ([DESIGN.md](DESIGN.md)) ✅
 
 > **전제**: Phase 1–7 의 모든 화면이 기능적으로 동작하고, shadcn 기본 스타일로 빠르게 구현되어 있다.
 > **산출물**: 모든 페이지가 [docs/DESIGN.md](DESIGN.md) Notion 스타일을 따른다. 색·타이포·여백·컴포넌트가 단일 토큰셋(`tokens.web.json`)을 통해 일관 적용되고, 다크 모드가 동작한다.
+>
+> **세분화**: (1) 디자인 토큰 추출 ✅ → (2) shadcn 컴포넌트 토큰 매핑 → (3) 화면별 적용 → (4) 다크 모드 마감. 한 단계씩.
+> **스택 메모**: Tailwind **v4(CSS-first `@theme`)** + shadcn oklch 변수. v3 식 `tailwind.config` preset 은 소비되지 않으므로 토큰→유틸 생성은 `globals.css @theme` 가 담당, `tailwind-preset.ts` 는 JS/컴포넌트용 타입드 토큰 export 로 적응. DESIGN hex 는 심볼 참조뿐이라 설명에 맞는 Notion 스타일 구체값을 확정.
 
-**디자인 토큰 추출**
+**디자인 토큰 추출** ✅ (단계 1)
 
-- [ ] [src/design/tokens.web.json](../src/design/tokens.web.json) — [DESIGN.md](DESIGN.md)의 색(brand/spectrum/tint/surface/text/semantic), 타이포(hero-display~caption-bold), 간격(xxs~hero), elevation, radius 토큰을 JSON 단일화
-- [ ] [src/design/tailwind-preset.ts](../src/design/tailwind-preset.ts) — 토큰 → Tailwind theme.extend (colors/fontSize/spacing/borderRadius/boxShadow)
-- [ ] `app/globals.css` — `:root` + `.dark` 에 CSS 변수 정의 (shadcn 호환 HSL 형식 + 토큰 동시 export)
-- [ ] `next/font` 로 **Pretendard Variable** 로딩 + `font-sans` 기본 매핑
+- [x] [src/design/tokens.web.json](../src/design/tokens.web.json) — 색(brand/navy/spectrum/tint/surface/text/semantic + darkColors), 타이포 14종(hero-display~button-md), 간격(xxs~hero), radius(xs~full), elevation(0~4) 단일화
+- [x] [src/design/tailwind-preset.ts](../src/design/tailwind-preset.ts) — `webTokens`/`color()`/타입 + `tailwindThemeExtend`(colors/spacing/borderRadius/fontSize/boxShadow 형태, 포터빌리티용)
+- [x] [src/app/globals.css](../src/app/globals.css) — `:root`+`.dark` 에 `--w-*` 토큰 변수(다크 surface/text 오버라이드) + `@theme inline` 으로 유틸 노출(`bg-brand`,`text-ink`,`bg-tint-*`,`shadow-elevation-*`,`text-hero-display`,`p-xl` 등). **충돌 회피**: DESIGN primary→`brand`, text-muted→`ink-muted` 로 노출(shadcn `--color-primary`/`muted` 미변경, repoint 은 단계 2)
+- [x] **Pretendard Variable** — jsdelivr CDN `@import` + `--font-sans` 매핑(`html @apply font-sans`). 빌드 CSS 검증: `--w-primary:#5b5bd6`, `--w-ink` light/dark 동시 방출, Pretendard import·`--font-sans:var(--w-font-sans)` 반영 확인. (next/font/local 은 woff2 vendoring 후 교체 가능 — 현재 폰트 바이너리 미보유로 CDN 채택)
 
-**shadcn 컴포넌트 토큰 매핑**
+**shadcn 컴포넌트 토큰 매핑** ✅ (단계 2 — 코어 repoint + 세부 variant 완료)
 
-- [ ] `button` — DESIGN.md `button-primary` (purple `{colors.primary}`, `rounded-md`, padding `10px 18px`) / `button-dark` / `button-secondary` / `button-ghost` / `button-link`
-- [ ] `card` — `rounded-lg` + 1px `{colors.hairline}` border + 기본 elevation 0
-- [ ] `input` / `textarea` — `rounded-md` height 44, focus 시 `2px solid {colors.primary}`
-- [ ] `badge` — purple/pink/orange/tag-pastel 5종 variant
-- [ ] `dialog` / `sheet` / `dropdown-menu` — elevation 4 (`rgba(15,15,15,0.16) 0 16 48 -8`)
-- [ ] `tabs` — `pill-tab` (rounded-full) + `segmented-tab` (underline) 2종
-- [ ] `separator` — `{colors.hairline-soft}` 1px
-- [ ] `skeleton` — `{colors.surface-soft}` 베이스, 톤다운 펄스
+- [x] **코어 repoint** ([globals.css](../src/app/globals.css)): shadcn 시맨틱 변수(`--primary/background/foreground/card/popover/secondary/muted/accent/destructive/border/input/ring`)를 brand `--w-*` 토큰으로 :root·.dark 양쪽 repoint + `--radius` 0.625→0.75rem(cards rounded-lg≈12·buttons md≈10). 컴포넌트 파일 수정 없이 전 화면이 purple primary·canvas surface·hairline border·다크 자동 전환. 빌드 CSS 검증(`--primary:var(--w-primary)` 등) PASS
+- [x] `button` 세부 ([button.tsx](../src/components/ui/button.tsx)) — `dark` variant(`bg-ink-deep`/`text-on-dark`) 추가 + `link` 을 link-blue(`text-link-blue`/hover `link-blue-pressed`)로 교체. `secondary`/`ghost`/`outline` 은 기존 토큰 매핑 유지. (size·padding 은 화면별 적용 단계에서 폴리시)
+- [x] `card` rounded-lg + hairline — 코어 repoint(`ring-1 ring-foreground/10` + `--radius` 0.75rem)로 적용됨. 별도 수정 불필요
+- [x] `input`/`textarea` ([input.tsx](../src/components/ui/input.tsx)·[textarea.tsx](../src/components/ui/textarea.tsx)) — height 44(`h-11`)·padding `px-3 py-2`·focus `ring-2 ring-ring/60`(ring=primary). textarea 는 `min-h-16`(>44) 유지·동일 focus
+- [x] `badge` ([badge.tsx](../src/components/ui/badge.tsx)) — status `purple`/`pink`/`orange`(brand bg + on-primary) + tag `tag-purple`/`tag-orange`/`tag-green`(tint bg + brand-deep text, `rounded-sm`)
+- [x] `dialog`/`sheet`/`dropdown-menu` — `shadow-elevation-4` 적용(sheet `shadow-lg`→, dropdown content `shadow-md`/sub `shadow-lg`→, dialog 신규)
+- [x] `tabs` ([tabs.tsx](../src/components/ui/tabs.tsx)) — `pill` variant(rounded-full·`border-hairline`·active `bg-ink-deep`/`text-on-dark`) 추가. `line` variant(after: underline)이 segmented 역할
+- [x] `separator` → `bg-hairline-soft` / `skeleton` → `bg-surface-soft` 베이스
+- [x] phase 색([phases.ts](../src/components/agent/phases.ts)) brand spectrum remap — 감지=link-blue·인식=brand-purple·판단=brand-orange·행동=brand-teal·학습=brand-pink(고채도 중간톤, 라이트/다크 공용·`dark:` 제거)
 
-**화면별 적용** (Phase 1–7 산출 페이지를 순회)
+**화면별 적용** ✅ (단계 3 — Phase 1–7 산출 페이지 순회 완료. 헤딩은 `text-heading-*`+`font-heading`, 본문 `text-body-sm`/`text-steel` 토큰으로 통일. 공용 `TopNav`(logo brand·active NavLink brand)도 함께 적용)
 
-- [ ] [app/(auth)/login/page.tsx](<../app/(auth)/login/page.tsx>) — 중앙 정렬, 친근한 어조 안내 문구, `button-primary` Google 버튼
-- [ ] [app/(app)/page.tsx](<../app/(app)/page.tsx>) (홈) — 6종 카드 그리드를 **pastel feature tile** 톤(peach/rose/mint/lavender/sky/yellow)으로 매핑
-- [ ] [app/(app)/kb/page.tsx](<../app/(app)/kb/page.tsx>) — SourceCard 호버 시 `{colors.surface}` 배경, 상태 칩 색상은 semantic 토큰, 우측 Sheet hairline 디바이더
-- [ ] [app/(app)/chat/[documentId]/page.tsx](<../app/(app)/chat/[documentId]/page.tsx>) — 메시지 행 간격 충분히, Quick Reply 는 `pill-tab` 톤, InsightBox 는 `card-feature-yellow-bold` 변형
-- [ ] [app/(app)/agent/page.tsx](<../app/(app)/agent/page.tsx>) — ActivityFeed phase별 컬러(brand spectrum), LoopDiagram 5단계, StatCard 4종, ApprovalQueue
-- [ ] [app/(app)/docs/page.tsx](<../app/(app)/docs/page.tsx>) + [docs/[id]](<../app/(app)/docs/[id]/page.tsx>) — 카드 그리드 + 버전 타임라인 + diff 가독성
-- [ ] [app/(app)/schedules/page.tsx](<../app/(app)/schedules/page.tsx>), [settings/page.tsx](<../app/(app)/settings/page.tsx>) — cron 입력, 토글, 채널 선택 UI
+- [x] [login/page.tsx](<../src/app/(auth)/login/page.tsx>) — surface 배경 + canvas 카드(elevation-2·hairline ring), 친근한 어조 카피, `h-11` primary Google 버튼
+- [x] [page.tsx](<../src/app/(app)/page.tsx>) (홈) — 6종 카드를 **pastel feature tile**(peach/lavender/mint/sky/rose/yellow-bold)로 매핑. 아이콘 칩(canvas/70) + brand 컬러 아이콘. 텍스트는 `brand-navy`(다크 미오버라이드 → 파스텔 위 항상 가독). hover lift+elevation-2
+- [x] [kb/page.tsx](<../src/app/(app)/kb/page.tsx>) — [SourceCard](../src/components/kb/SourceCard.tsx) hover `bg-surface`+elevation-2, 상태 칩 semantic(ready=success·error=destructive·crawling=warning/15), 태그 `tag-purple`. [SourceSheet](../src/components/kb/SourceSheet.tsx) 동일 + Separator=hairline-soft(단계2)
+- [x] [chat/[documentId]](<../src/app/(app)/chat/[documentId]/page.tsx>) — [MessageList](../src/components/chat/MessageList.tsx) 행 간격 gap-5·py-6, [QuickReplies](../src/components/chat/QuickReplies.tsx) `rounded-full`+hairline pill 톤, [InsightBox](../src/components/chat/InsightBox.tsx) `card-feature-yellow-bold`(tint-yellow-bold + brand-navy 텍스트), [ProgressTrack](../src/components/chat/ProgressTrack.tsx) brand pill(active=brand·done=tint-lavender)
+- [x] [agent/page.tsx](<../src/app/(app)/agent/page.tsx>) — ActivityFeed brand spectrum dot(단계2 phases.ts)·canvas+hairline row, LoopDiagram(brand spectrum), [StatCard](../src/components/agent/StatCard.tsx) 4종 accent(brand·green·orange·link-blue), ApprovalQueue/AgentLive 발행=success 칩
+- [x] [docs/page.tsx](<../src/app/(app)/docs/page.tsx>) + [docs/[id]](<../src/app/(app)/docs/[id]/page.tsx>) — 카드 hover surface+elevation-2, 버전 타임라인 brand 강조, diff 색을 semantic(`text-success`/`text-error`·`bg-success/10`·`bg-error/10`)으로 remap
+- [x] [schedules/page.tsx](<../src/app/(app)/schedules/page.tsx>)·[settings/page.tsx](<../src/app/(app)/settings/page.tsx>) — [ScheduleForm](../src/components/schedules/ScheduleForm.tsx)·[SettingsForm](../src/components/settings/SettingsForm.tsx) 의 `<select>`/inputCls 를 `h-11`·`rounded-lg`·focus `ring-2`로 Input 과 일치, 토글 `accent-brand`
 
-**다크 모드**
+**다크 모드** ✅ (단계 4)
 
-- [ ] DESIGN.md `.dark` 토큰 — **따뜻한 다크 톤** (순흑 `#000` 사용 금지)
-- [ ] `next-themes` 설치 + 상단 네비에 토글
-- [ ] 모든 페이지 다크 토글 시 가독성/대비 검수
+- [x] `.dark` 토큰 — **따뜻한 다크 톤**(warm neutral r≥g≥b, Notion warm-charcoal 결)으로 [tokens.web.json](../src/design/tokens.web.json) `darkColors` + [globals.css](../src/app/globals.css) `.dark` 동시 갱신. canvas `#1a1917`·surface `#242220`·ink `#edece9` 등 순흑 `#000` 미사용. shadcn 시맨틱 변수는 `--w-*` repoint(단계2) 이라 자동 전환
+- [x] `next-themes`(설치 완료) wiring — [theme-provider.tsx](../src/components/theme-provider.tsx)(`attribute="class"`·`defaultTheme="system"`·`enableSystem`·`disableTransitionOnChange`)를 [layout.tsx](../src/app/layout.tsx) `<body>` 에 마운트(`<html suppressHydrationWarning>` 기존), 상단 네비에 [ThemeToggle](../src/components/nav/ThemeToggle.tsx)(CSS `.dark` 기반 Sun/Moon 토글 → hydration 미스매치 없음) 추가
+- [x] 가독성/대비 검수 — fixed-light 표면(pastel tile·InsightBox)의 inset frost 를 `bg-white/X`(테마 안정)로 교체해 다크에서 dark frost 플립 방지, 텍스트는 `brand-navy`(다크 미오버라이드)로 파스텔 위 대비 확보. user 버블 `bg-foreground`/`text-background` 는 다크에서 자동 반전, 상태/diff 는 fixed semantic. 빌드 CSS `.dark` 룰 41개·warm 토큰 방출 검증, hardcoded light/dark 잔여는 overlay scrim(bg-black/10)·PPT 페이퍼(SlidePreview)·의도된 frost 2곳뿐
 
-**디자인 QA**
+**추가 UI 개선** ✅ (사용자 피드백 반영 — Phase 8 작업 중 발생)
 
-- [ ] 페이지별 스크린샷(라이트/다크) → [DESIGN_GUIDE.md](DESIGN_GUIDE.md) "디자인 핵심 원칙" 6가지 대조 (여백 우선 / 따뜻한 미니멀리즘 / 산세리프 헤딩 / 부드러운 표면 / 절제된 색상 / 장식 최소화)
-- [ ] 모바일 (< 768px) 레이아웃 검수 — Phase 1–7 까지 데스크탑 우선이었으므로
-- [ ] 접근성: focus ring, 색 대비 (WCAG AA)
+- [x] **모바일 네비** — md 미만에서 햄버거 → 우측 `Sheet` 드로어([MobileNav.tsx](../src/components/nav/MobileNav.tsx)·[items.ts](../src/components/nav/items.ts), 아이콘+라벨·활성 강조·링크 탭 시 닫힘·하단 이메일(말줄임)/로그아웃). 테마 토글은 모바일 헤더 햄버거 좌측에 배치. md+ 는 기존 가로 메뉴
+- [x] **커스텀 Select** — 네이티브 `<select>` 를 base-ui 기반 [ui/select.tsx](../src/components/ui/select.tsx)(Trigger=Input 톤·Popup=elevation-4·체크 표시·키보드)로 교체. [ScheduleForm](../src/components/schedules/ScheduleForm.tsx)·[SettingsForm](../src/components/settings/SettingsForm.tsx) 적용
+- [x] **문서 삭제(hard delete)** — [api/documents/[id]](<../src/app/api/documents/[id]/route.ts>)(pending 승인 가드·스토리지 정리·audit) + [DocActions](../src/components/docs/DocActions.tsx)(확인 Dialog), 문서함 목록·상세 노출 (결정 로그 참조)
+- [x] **인터뷰 단계 되돌리기** — [api/interview/step](<../src/app/api/interview/step/route.ts>)(currentStep 만 이동·답변 보존) + [ProgressTrack](../src/components/chat/ProgressTrack.tsx) 칩 클릭 + [store](../src/lib/interview/store.ts) `gotoStep`(대화 rewind·`questionByStep` 추적). 이전 답변 입력창 자동 채움
+- [x] **채팅 진입 중앙 로딩** [chat/loading.tsx](<../src/app/(app)/chat/loading.tsx>) + **타이핑 인디케이터**(MessageList `TypingBubble` 점 3개 staggered bounce) — pending 피드백 가시화
+- [x] **컨테이너 폭/여백 통일** — 전 (app) 페이지 `<main>` 을 `max-w-6xl px-6 py-8` 로 일치(login 제외). 로그인 레이아웃 collapse 버그 수정(원인=Tailwind spacing 토큰 충돌, 8장 함정 기록)
 
-**검증**
+**디자인 QA** ✅
 
-- [ ] `grep -rE '#[0-9A-Fa-f]{6}' src/components/ src/app/` 결과 0 (hex 직접 박힌 곳 없음)
-- [ ] shadcn 기본 색 그대로 남아있는 곳 0 (모두 토큰 경유)
-- [ ] PPT 토큰(`tokens.ppt.json`)과 웹 토큰(`tokens.web.json`) **분리 유지** — 서로 import 금지
-- [ ] 임의 페이지 5장 캡처 시 DESIGN.md 와 시각적 일관성 통과
+- [x] 6원칙(여백 우선/따뜻한 미니멀리즘/산세리프 헤딩/부드러운 표면/절제된 색상/장식 최소화) 기준으로 화면별 구현·사용자 검수 통과 (스크린샷 아카이브는 Phase 9 데모 자료에서 선택 작성)
+- [x] 모바일 (< 768px) — 햄버거 Sheet 네비 + 반응형 그리드(`sm:`/`lg:` 컬럼), 모바일 폭 사용자 테스트 통과
+- [x] 접근성: focus ring(`focus-visible:ring-2`)·아이콘 버튼 `aria-label`(토글/메뉴/삭제/Select) 적용. **WCAG AA 색 대비 정량 감사(Lighthouse/axe)는 Phase 9 리허설로** 이월
+
+**검증** ✅
+
+- [x] `grep -rE '#[0-9A-Fa-f]{6}' src/app src/components` 결과 0 — 단, [globals.css](../src/app/globals.css) 의 `--w-*` 토큰 정의(= tokens.web.json 미러, 단일 출처)는 제외
+- [x] shadcn 기본 색/Tailwind 팔레트(emerald·rose·slate-NNN 등) 잔재 0 — 모두 토큰 경유
+- [x] PPT 토큰(`tokens.ppt.json`)과 웹 토큰(`tokens.web.json`) **분리 유지** — 상호 import 0 (grep 확인)
+- [x] 화면별 토큰 단일 출처로 시각적 일관성 확보 + 사용자 검수 통과
 
 ---
 
@@ -979,3 +992,4 @@ SENTRY_DSN=
 - **Auth.js v5 split config + JWT session strategy** (2026-05-28): Edge runtime (middleware) 에서 DB 접근 불가 → [src/auth.config.ts](../src/auth.config.ts) (providers/callbacks, Edge-safe) 와 [src/auth.ts](../src/auth.ts) (+DrizzleAdapter, Node) 로 분리. Session strategy 는 `jwt` 로 — middleware 에서 추가 DB 호출 없이 인증 판정 가능. database strategy 가 필요해지면 (예: 즉시 logout 반영) 전환.
 - **Sentry `sendDefaultPii: false` 강제** (2026-05-28): `@sentry/wizard` 가 기본값 `true` 로 init 코드 생성하지만 plan §10 비기능 ("PII 는 로그에 남기지 않음") 과 정면 충돌. [sentry.server.config.ts](../sentry.server.config.ts), [sentry.edge.config.ts](../sentry.edge.config.ts), [src/instrumentation-client.ts](../src/instrumentation-client.ts) 3 파일 모두 `false` 로 변경. 향후 특정 컨텍스트만 화이트리스트하려면 `beforeSend` 에서 명시.
 - **Sentry DSN 하드코딩 유지** (2026-05-28): wizard 가 3 init 파일에 DSN 을 직접 박는데 DSN 은 공개해도 무방 (Sentry 표준 권장) → 환경변수화하지 않고 하드코딩 유지. `SENTRY_DSN` env 는 unused — 향후 환경별 DSN 분기 필요 시 (`process.env.NEXT_PUBLIC_SENTRY_DSN`) 코드 갈아끼움. env 파일 주석으로 명시.
+- **문서 삭제(hard delete) 채택** (2026-06-01): 문서함에서 초안·완료 문서를 영구 삭제. soft-delete(보관/휴지통) 대신 **hard delete** 선택 — 데모 규모 + 스키마가 이미 안전하게 설계됨(`document_versions`/`document_sources`/`interview_sessions` 는 FK `cascade`, `approvals.documentId` 는 `set null`). [approve 플로우](../src/app/api/agent/approve/route.ts)는 삭제된 문서에 graceful no-op(버전 update 0건·null documentId 스킵)이라 워크플로우 무손상. **가드 1개**: 미결(pending) 승인이 걸린 문서는 `409 pending_approval` 로 삭제 차단(승인 큐 정합성). `.pptx` 스토리지는 Postgres cascade 대상이 아니라 [storage.ts](../src/lib/storage.ts) `deletePptxObjects()` 로 best-effort 정리. 구현: [api/documents/[id]/route.ts](<../src/app/api/documents/[id]/route.ts>)(DELETE·RBAC·audit_logs `document.delete`), [DocActions.tsx](../src/components/docs/DocActions.tsx)(확인 Dialog), 문서함 목록·상세에 노출.

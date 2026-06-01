@@ -106,3 +106,13 @@ export async function createPptxDownloadUrl(key: string): Promise<string> {
   }
   return data.signedUrl;
 }
+
+// 문서 삭제 시 버전들의 .pptx 오브젝트 정리. best-effort — 실패해도 throw 하지 않는다.
+export async function deletePptxObjects(keys: string[]): Promise<void> {
+  const valid = keys.filter((k): k is string => Boolean(k));
+  if (valid.length === 0) return;
+  const { error } = await supabase.storage.from(BUCKETS.pptx).remove(valid);
+  if (error) {
+    console.error("deletePptxObjects failed:", error.message);
+  }
+}

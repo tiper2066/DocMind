@@ -36,9 +36,9 @@ export default async function SchedulesPage() {
     .orderBy(desc(schedules.createdAt));
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-8">
-      <h1 className="text-2xl font-semibold tracking-tight">스케줄</h1>
-      <p className="mb-6 text-sm text-muted-foreground">
+    <main className="mx-auto max-w-6xl px-6 py-8">
+      <h1 className="font-heading text-heading-3 text-ink">스케줄</h1>
+      <p className="mt-1 mb-6 text-body-sm text-steel">
         cron 주기로 문서를 자동 생성합니다 (Mode C). 매분 평가되어 일치하는 스케줄이 실행됩니다.
       </p>
 

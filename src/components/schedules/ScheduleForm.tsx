@@ -5,6 +5,13 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const TYPES: Array<{ value: string; label: string }> = [
   { value: "sales", label: "영업 제안서" },
@@ -15,8 +22,9 @@ const TYPES: Array<{ value: string; label: string }> = [
   { value: "marketing", label: "마케팅 자료" },
 ];
 
-const inputCls =
-  "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
+const TYPE_ITEMS: Record<string, string> = Object.fromEntries(
+  TYPES.map((t) => [t.value, t.label]),
+);
 
 export function ScheduleForm() {
   const router = useRouter();
@@ -68,16 +76,27 @@ export function ScheduleForm() {
           <span className="text-xs text-muted-foreground">Cron (분 시 일 월 요일)</span>
           <Input value={form.cron} onChange={set("cron")} placeholder="* * * * *" />
         </label>
-        <label className="space-y-1">
-          <span className="text-xs text-muted-foreground">문서 유형</span>
-          <select value={form.type} onChange={set("type")} className={inputCls}>
-            {TYPES.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="space-y-1">
+          <span className="block text-xs text-muted-foreground">문서 유형</span>
+          <Select
+            items={TYPE_ITEMS}
+            value={form.type}
+            onValueChange={(v: string | null) =>
+              setForm((f) => ({ ...f, type: v ?? "sales" }))
+            }
+          >
+            <SelectTrigger aria-label="문서 유형">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {TYPES.map((t) => (
+                <SelectItem key={t.value} value={t.value}>
+                  {t.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       <label className="block space-y-1">
         <span className="text-xs text-muted-foreground">제목</span>

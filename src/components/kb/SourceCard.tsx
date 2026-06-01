@@ -14,7 +14,7 @@ export function SourceCard({ source }: { source: Source }) {
   const title = source.title ?? defaultTitle(source);
 
   return (
-    <Card className="flex h-full w-full flex-col gap-3 p-4 text-left transition hover:border-foreground/20 hover:shadow-sm">
+    <Card className="flex h-full w-full flex-col gap-3 p-4 text-left transition duration-200 hover:-translate-y-0.5 hover:bg-surface hover:shadow-elevation-2">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
@@ -33,7 +33,7 @@ export function SourceCard({ source }: { source: Source }) {
       {source.tags && source.tags.length > 0 && (
         <div className="mt-auto flex flex-wrap gap-1 pt-2">
           {source.tags.slice(0, 5).map((tag) => (
-            <Badge key={tag} variant="outline" className="text-xs">
+            <Badge key={tag} variant="tag-purple" className="text-xs">
               {tag}
             </Badge>
           ))}
@@ -46,7 +46,7 @@ export function SourceCard({ source }: { source: Source }) {
 function StatusChip({ status }: { status: string }) {
   if (status === "ready") {
     return (
-      <Badge variant="default" className="shrink-0">
+      <Badge className="shrink-0 border-transparent bg-success text-on-primary">
         ready
       </Badge>
     );
@@ -59,7 +59,7 @@ function StatusChip({ status }: { status: string }) {
     );
   }
   return (
-    <Badge variant="secondary" className="shrink-0">
+    <Badge className="shrink-0 border-transparent bg-warning/15 text-warning">
       crawling…
     </Badge>
   );

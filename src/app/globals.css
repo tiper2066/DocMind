@@ -1,3 +1,4 @@
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css");
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -48,31 +49,206 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ── DocMind 웹 디자인 토큰 (Phase 8 · docs/DESIGN.md · 단일 출처 tokens.web.json) ──
+   기존 shadcn 변수와 충돌하지 않는 새 토큰만 노출(추가형). DESIGN purple 은 shadcn
+   --color-primary 와 겹치지 않게 `brand`, DESIGN text-muted 는 `ink-muted` 로 노출.
+   shadcn 컴포넌트 repoint 는 다음 단계. */
+@theme inline {
+  --font-sans: var(--w-font-sans);
+
+  --color-brand: var(--w-primary);
+  --color-brand-pressed: var(--w-primary-pressed);
+  --color-brand-deep: var(--w-primary-deep);
+  --color-on-primary: var(--w-on-primary);
+  --color-brand-navy: var(--w-brand-navy);
+  --color-brand-navy-deep: var(--w-brand-navy-deep);
+  --color-brand-navy-mid: var(--w-brand-navy-mid);
+  --color-link-blue: var(--w-link-blue);
+  --color-link-blue-pressed: var(--w-link-blue-pressed);
+  --color-brand-pink: var(--w-brand-pink);
+  --color-brand-pink-deep: var(--w-brand-pink-deep);
+  --color-brand-orange: var(--w-brand-orange);
+  --color-brand-orange-deep: var(--w-brand-orange-deep);
+  --color-brand-purple: var(--w-brand-purple);
+  --color-brand-purple-300: var(--w-brand-purple-300);
+  --color-brand-purple-800: var(--w-brand-purple-800);
+  --color-brand-teal: var(--w-brand-teal);
+  --color-brand-green: var(--w-brand-green);
+  --color-brand-yellow: var(--w-brand-yellow);
+  --color-brand-brown: var(--w-brand-brown);
+  --color-tint-peach: var(--w-card-tint-peach);
+  --color-tint-rose: var(--w-card-tint-rose);
+  --color-tint-mint: var(--w-card-tint-mint);
+  --color-tint-lavender: var(--w-card-tint-lavender);
+  --color-tint-sky: var(--w-card-tint-sky);
+  --color-tint-yellow: var(--w-card-tint-yellow);
+  --color-tint-yellow-bold: var(--w-card-tint-yellow-bold);
+  --color-tint-cream: var(--w-card-tint-cream);
+  --color-tint-gray: var(--w-card-tint-gray);
+  --color-canvas: var(--w-canvas);
+  --color-surface: var(--w-surface);
+  --color-surface-soft: var(--w-surface-soft);
+  --color-hairline: var(--w-hairline);
+  --color-hairline-soft: var(--w-hairline-soft);
+  --color-hairline-strong: var(--w-hairline-strong);
+  --color-ink-deep: var(--w-ink-deep);
+  --color-ink: var(--w-ink);
+  --color-charcoal: var(--w-charcoal);
+  --color-slate: var(--w-slate);
+  --color-steel: var(--w-steel);
+  --color-stone: var(--w-stone);
+  --color-ink-muted: var(--w-muted);
+  --color-on-dark: var(--w-on-dark);
+  --color-on-dark-muted: var(--w-on-dark-muted);
+  --color-success: var(--w-semantic-success);
+  --color-warning: var(--w-semantic-warning);
+  --color-error: var(--w-semantic-error);
+
+  /* DESIGN 간격 토큰은 Tailwind 기본 숫자 스케일과 1:1 매핑되므로(xs=8px→p-2, md=16px→p-4,
+     lg=24px→p-6, xl=32px→p-8, xxl=48px→p-12, xxxl=64px→p-16) 별도 --spacing-* 를 두지 않는다.
+     과거 명명형 토큰(--spacing-sm 등)은 내장 container 스케일(max-w-sm 등)을 가려 깨뜨렸음. */
+
+  --shadow-elevation-0: none;
+  --shadow-elevation-1: rgba(15, 15, 15, 0.04) 0px 1px 2px 0px;
+  --shadow-elevation-2: rgba(15, 15, 15, 0.08) 0px 4px 12px 0px;
+  --shadow-elevation-3: rgba(15, 15, 15, 0.2) 0px 24px 48px -8px;
+  --shadow-elevation-4: rgba(15, 15, 15, 0.16) 0px 16px 48px -8px;
+
+  --text-hero-display: 80px;
+  --text-hero-display--line-height: 1.05;
+  --text-hero-display--font-weight: 600;
+  --text-hero-display--letter-spacing: -2px;
+  --text-display-lg: 56px;
+  --text-display-lg--line-height: 1.1;
+  --text-display-lg--font-weight: 600;
+  --text-display-lg--letter-spacing: -1px;
+  --text-heading-1: 48px;
+  --text-heading-1--line-height: 1.15;
+  --text-heading-1--font-weight: 600;
+  --text-heading-1--letter-spacing: -0.5px;
+  --text-heading-2: 36px;
+  --text-heading-2--line-height: 1.2;
+  --text-heading-2--font-weight: 600;
+  --text-heading-2--letter-spacing: -0.5px;
+  --text-heading-3: 28px;
+  --text-heading-3--line-height: 1.25;
+  --text-heading-3--font-weight: 600;
+  --text-heading-4: 22px;
+  --text-heading-4--line-height: 1.3;
+  --text-heading-4--font-weight: 600;
+  --text-heading-5: 18px;
+  --text-heading-5--line-height: 1.4;
+  --text-heading-5--font-weight: 600;
+  --text-subtitle: 18px;
+  --text-subtitle--line-height: 1.5;
+  --text-body-md: 16px;
+  --text-body-md--line-height: 1.55;
+  --text-body-sm: 14px;
+  --text-body-sm--line-height: 1.5;
+  --text-caption-bold: 13px;
+  --text-caption-bold--line-height: 1.4;
+  --text-caption-bold--font-weight: 600;
+  --text-button-md: 14px;
+  --text-button-md--line-height: 1.3;
+  --text-button-md--font-weight: 500;
+}
+
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --w-font-sans: "Pretendard Variable", Pretendard, Inter, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --w-primary: #5b5bd6;
+  --w-primary-pressed: #4a4ac4;
+  --w-primary-deep: #3a3aa3;
+  --w-on-primary: #ffffff;
+  --w-brand-navy: #1c1b33;
+  --w-brand-navy-deep: #141329;
+  --w-brand-navy-mid: #2a2950;
+  --w-link-blue: #2383e2;
+  --w-link-blue-pressed: #1a6ec0;
+  --w-brand-pink: #e255a1;
+  --w-brand-pink-deep: #c2298a;
+  --w-brand-orange: #e0883e;
+  --w-brand-orange-deep: #cb6e17;
+  --w-brand-purple: #9a6dd7;
+  --w-brand-purple-300: #c4a7e7;
+  --w-brand-purple-800: #5a2ca0;
+  --w-brand-teal: #2bb3a3;
+  --w-brand-green: #4dab6d;
+  --w-brand-yellow: #f2d35e;
+  --w-brand-brown: #a37c5b;
+  --w-card-tint-peach: #fdebd9;
+  --w-card-tint-rose: #fbe2e8;
+  --w-card-tint-mint: #d9f2e6;
+  --w-card-tint-lavender: #ece4fb;
+  --w-card-tint-sky: #dcecfb;
+  --w-card-tint-yellow: #fbf1cf;
+  --w-card-tint-yellow-bold: #f6d873;
+  --w-card-tint-cream: #f7f3ea;
+  --w-card-tint-gray: #f1f1ef;
+  --w-canvas: #ffffff;
+  --w-surface: #f7f7f5;
+  --w-surface-soft: #efefed;
+  --w-hairline: #e9e9e7;
+  --w-hairline-soft: #f0f0ee;
+  --w-hairline-strong: #d8d8d4;
+  --w-ink-deep: #0f0f0f;
+  --w-ink: #1d1c1a;
+  --w-charcoal: #37352f;
+  --w-slate: #5f5e5b;
+  --w-steel: #7c7b77;
+  --w-stone: #9b9a96;
+  --w-muted: #b8b7b3;
+  --w-on-dark: #ffffff;
+  --w-on-dark-muted: rgba(255, 255, 255, 0.64);
+  --w-semantic-success: #2f9e69;
+  --w-semantic-warning: #cb6e17;
+  --w-semantic-error: #e03e3e;
+}
+
+.dark {
+  /* 따뜻한 다크 톤(warm neutral, r≥g≥b) — tokens.web.json darkColors 미러. 순흑 #000 금지. */
+  --w-canvas: #1a1917;
+  --w-surface: #242220;
+  --w-surface-soft: #2d2a27;
+  --w-hairline: #36322e;
+  --w-hairline-soft: #2a2724;
+  --w-hairline-strong: #47423c;
+  --w-ink-deep: #ffffff;
+  --w-ink: #edece9;
+  --w-charcoal: #d8d4cd;
+  --w-slate: #a9a59d;
+  --w-steel: #928d84;
+  --w-stone: #787067;
+  --w-muted: #5d564e;
+}
+
+:root {
+  /* Phase 8 단계2: shadcn 시맨틱 변수를 brand 토큰(--w-*)으로 repoint. 다크는 --w-* 가 자동 전환. */
+  --background: var(--w-canvas);
+  --foreground: var(--w-ink);
+  --card: var(--w-canvas);
+  --card-foreground: var(--w-ink);
+  --popover: var(--w-canvas);
+  --popover-foreground: var(--w-ink);
+  --primary: var(--w-primary);
+  --primary-foreground: var(--w-on-primary);
+  --secondary: var(--w-surface);
+  --secondary-foreground: var(--w-ink);
+  --muted: var(--w-surface);
+  --muted-foreground: var(--w-steel);
+  --accent: var(--w-surface-soft);
+  --accent-foreground: var(--w-ink);
+  --destructive: var(--w-semantic-error);
+  --border: var(--w-hairline);
+  --input: var(--w-hairline-strong);
+  --ring: var(--w-primary);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
+  --radius: 0.75rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -84,24 +260,25 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  /* Phase 8 단계2: 다크도 동일 brand 토큰. surface/text 는 --w-* 의 .dark 오버라이드로 전환. */
+  --background: var(--w-canvas);
+  --foreground: var(--w-ink);
+  --card: var(--w-surface);
+  --card-foreground: var(--w-ink);
+  --popover: var(--w-surface);
+  --popover-foreground: var(--w-ink);
+  --primary: var(--w-primary);
+  --primary-foreground: var(--w-on-primary);
+  --secondary: var(--w-surface);
+  --secondary-foreground: var(--w-ink);
+  --muted: var(--w-surface);
+  --muted-foreground: var(--w-stone);
+  --accent: var(--w-surface-soft);
+  --accent-foreground: var(--w-ink);
+  --destructive: var(--w-semantic-error);
+  --border: var(--w-hairline);
+  --input: var(--w-hairline-strong);
+  --ring: var(--w-primary);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);

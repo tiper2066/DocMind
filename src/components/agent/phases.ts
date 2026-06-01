@@ -1,10 +1,10 @@
-// 5단계 표시 설정 (클라 안전, db import 없음). Phase 8 에서 brand spectrum 으로 remap.
+// 5단계 표시 설정 (클라 안전, db import 없음). brand spectrum 토큰(고채도 중간톤 → 라이트/다크 공용).
 export const PHASES = [
-  { key: "detect", label: "감지", text: "text-sky-600 dark:text-sky-400" },
-  { key: "perceive", label: "인식", text: "text-violet-600 dark:text-violet-400" },
-  { key: "reason", label: "판단", text: "text-amber-600 dark:text-amber-400" },
-  { key: "act", label: "행동", text: "text-emerald-600 dark:text-emerald-400" },
-  { key: "learn", label: "학습", text: "text-rose-600 dark:text-rose-400" },
+  { key: "detect", label: "감지", text: "text-link-blue" },
+  { key: "perceive", label: "인식", text: "text-brand-purple" },
+  { key: "reason", label: "판단", text: "text-brand-orange" },
+  { key: "act", label: "행동", text: "text-brand-teal" },
+  { key: "learn", label: "학습", text: "text-brand-pink" },
 ] as const;
 
 export type PhaseKey = (typeof PHASES)[number]["key"];

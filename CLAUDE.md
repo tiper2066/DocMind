@@ -32,10 +32,10 @@
 
 | 항목 | 값 |
 |---|---|
-| **활성 Phase** | Phase 8 — UI 디자인 시스템 적용 ([docs/DESIGN.md](docs/DESIGN.md)) |
-| **완료 Phase** | Phase 0, Phase 1, Phase 2, Phase 3, Phase 4, Phase 5, Phase 6, Phase 7 |
-| **다음 액션** | [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) 15장 Phase 8 — `tokens.web.json` + `tailwind-preset.ts` + `globals.css`(:root/.dark) + Pretendard, shadcn 컴포넌트 토큰 매핑, 화면별 DESIGN.md 적용, 다크모드. **전제**: Phase 1–7 모든 화면이 shadcn 기본으로 기능 동작 중 → 토큰 일괄 적용. **주의**: ActivityFeed/LoopDiagram phase 색([phases.ts](src/components/agent/phases.ts))은 Tailwind 팔레트 → brand spectrum 으로 remap 필요 |
-| **마지막 갱신** | 2026-06-01 (Phase 7 ✅ 전체 완료 — (5) 설정: `/settings`(에이전트 정책 auto_run/publish + Slack 채널, monitor `config_json` 저장)·이메일 수신자·브랜드 템플릿(읽기)·연결 배지 + `/api/settings` PATCH. `act` 가 `getNotifyChannel`/`shouldAutoPublish` 로 설정 반영. roundtrip 검증 PASS, nav 설정 링크. Phase 7 (1)~(5) 모두 ✅, 실시간 1초·승인 시각 e2e 만 브라우저 1회 잔여) |
+| **활성 Phase** | Phase 9 — 데모 준비 & 최종 검증 |
+| **완료 Phase** | Phase 0, Phase 1, Phase 2, Phase 3, Phase 4, Phase 5, Phase 6, Phase 7, Phase 8 |
+| **다음 액션** | Phase 8 **전체 완료**(토큰추출→컴포넌트매핑→화면적용→다크모드 + 사용자 피드백 UI개선 + QA/검증). **다음 = Phase 9**: `scripts/seed-demo.ts`·`force-change.ts`, `/demo/playback`, 리허설(Demo A<3분·B<2분), 7항목 통과 기준. **이월 1건**: WCAG AA 색 대비 정량 감사(Lighthouse/axe)를 Phase 9 리허설에서 수행. |
+| **마지막 갱신** | 2026-06-01 (Phase 8 ✅ 마감 — 검증 grep 3종 통과(hex 0·팔레트 0·PPT↔웹 토큰 분리 0). 작업 중 사용자 피드백 UI개선 반영: 모바일 햄버거 Sheet 네비, base-ui 커스텀 Select, 문서 hard-delete, 인터뷰 단계 되돌리기(rewind), 채팅 중앙 로딩+타이핑 점 애니메이션, 컨테이너 폭/여백 통일, 로그인 collapse 버그(Tailwind spacing 충돌) 수정. lint·build PASS) |
 | **블로커** | (없음) |
 
 상세 체크박스는 [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) 15장에 있다. 본 표는 그 헤더만 옮긴 것이라고 생각하면 된다.
@@ -164,6 +164,7 @@ pnpm verify:agent         # 자율 루프 e2e: forced content_hash → 5단계 e
 - **Node 전용 native 의존성과 Next 16 번들링** → `pdf-parse` (pdfjs-dist 래퍼), `jsdom` 등은 Next 가 ESM 으로 번들하려 하면 빌드/런타임 실패. [next.config.ts](next.config.ts) 의 `serverExternalPackages: ["pdf-parse", "jsdom"]` 에 추가해 Node `require` 로 두 번 다 로드되게 한다. 새 native-만-가능 패키지 추가 시 동일 처리.
 - **`<html>` hydration mismatch (`data-hwp-extension` 등)** → 서버 HTML 엔 없고 클라엔 있는 속성 경고는 **브라우저 확장프로그램**이 React 로드 전 `<html>` 에 주입한 것(앱 버그 아님). 동반되는 `message channel closed before a response` 도 확장 메시징 노이즈. 시크릿 창이면 사라짐. 완화: [src/app/layout.tsx](src/app/layout.tsx) `<html suppressHydrationWarning>` (해당 요소 속성만 무시, 자식 검사는 유지).
 - **Voyage 무료 티어 = 3 RPM / 10K TPM** → 결제수단 미등록 시 분당 3 호출 한도. 인터뷰 5문답 + KB 매칭 + generate(11+ 호출) 가 1~2분에 몰리면 즉시 429 (`voyage 429: You have not yet added your payment method ...`). **영구 해결**: [dashboard.voyageai.com](https://dashboard.voyageai.com) 에서 결제수단 등록 → 표준 limit 으로 자동 복구. **앱 측 방어**: (a) [src/lib/embeddings.ts](src/lib/embeddings.ts) 가 query embedding 을 process-level Map cache (256 entry LRU) + 429 시 25s 대기 후 1회 재시도, (b) 인터뷰 turn 은 `sources` step + 초기 SSR 에서만 KB 매칭 (다른 turn 은 직전 매칭을 store 가 유지), (c) generate 는 모든 slide-fill query 를 단일 batched `embed()` 호출로 묶음. 총 호출 수 17 → 4 (75% 절감).
+- **Tailwind v4 `@theme` 의 `--spacing-<name>` 이 내장 사이즈 스케일을 가림** → `@theme` 에 `--spacing-sm/md/lg/xl` 같은 **t-shirt 명명 키**를 추가하면 `max-w-sm`·`w-md`·`max-w-lg` 등 사이징 유틸이 `--container-*`(24rem 등) 대신 그 spacing 값(12px 등)으로 인라인된다. 증상: `max-w-sm` 쓴 요소(로그인 카드·Dialog·Sheet·SourceSheet·DropZone)가 12~16px 로 collapse — 배경/보더 없으면 안 보이다가 카드 배경 넣는 순간 드러남. **해결: 명명형 `--spacing-*` 토큰을 두지 말 것.** DESIGN 간격(4·8·12·16·24·32·48·64px)은 Tailwind 기본 숫자 스케일(`p-1/2/3/4/6/8/12/16`)과 1:1 이라 명명 토큰이 불필요. (Phase 8 step1 에서 넣었다가 제거함 — [globals.css](src/app/globals.css))
 
 ---
 

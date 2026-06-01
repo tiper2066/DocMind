@@ -46,9 +46,9 @@ export default async function SettingsPage() {
     !process.env.RESEND_API_KEY.startsWith("re_xxxx");
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-8">
-      <h1 className="text-2xl font-semibold tracking-tight">설정</h1>
-      <p className="mb-6 text-sm text-muted-foreground">
+    <main className="mx-auto max-w-6xl px-6 py-8">
+      <h1 className="font-heading text-heading-3 text-ink">설정</h1>
+      <p className="mt-1 mb-6 text-body-sm text-steel">
         에이전트 정책, 알림 채널, 브랜드 템플릿을 관리합니다.
       </p>
 

@@ -21,7 +21,7 @@ export function ActivityFeed({ events }: { events: AgentEventMessage[] }) {
         return (
           <li
             key={e.id}
-            className="flex items-center gap-3 rounded-md border px-3 py-2 text-sm"
+            className="flex items-center gap-3 rounded-md bg-canvas px-3 py-2 text-sm ring-1 ring-hairline"
           >
             <span
               className={`size-2 shrink-0 rounded-full bg-current ${failed ? "text-destructive" : phaseText(e.phase)}`}

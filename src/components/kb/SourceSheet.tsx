@@ -64,7 +64,7 @@ export function SourceSheet({
               <h4 className="text-xs font-medium text-muted-foreground">태그</h4>
               <div className="flex flex-wrap gap-1">
                 {source.tags.map((t) => (
-                  <Badge key={t} variant="outline">
+                  <Badge key={t} variant="tag-purple">
                     {t}
                   </Badge>
                 ))}
@@ -101,7 +101,16 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 function StatusValue({ status }: { status: string }) {
-  if (status === "ready") return <Badge variant="default">ready</Badge>;
+  if (status === "ready")
+    return (
+      <Badge className="border-transparent bg-success text-on-primary">
+        ready
+      </Badge>
+    );
   if (status === "error") return <Badge variant="destructive">error</Badge>;
-  return <Badge variant="secondary">crawling…</Badge>;
+  return (
+    <Badge className="border-transparent bg-warning/15 text-warning">
+      crawling…
+    </Badge>
+  );
 }

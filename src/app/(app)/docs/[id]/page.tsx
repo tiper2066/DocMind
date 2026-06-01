@@ -8,6 +8,7 @@ import { getWorkspaceContext } from "@/lib/rbac";
 import { DOC_TYPE_LABELS } from "@/lib/interview/machine";
 import { diffDecks, diffStats } from "@/lib/diff";
 import { Badge } from "@/components/ui/badge";
+import { DocActions } from "@/components/docs/DocActions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -73,17 +74,22 @@ export default async function DocDetailPage({
             {doc.status === "ready" ? "완료" : "초안"}
           </Badge>
         </div>
-        <h1 className="text-2xl font-semibold tracking-tight">{doc.title}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {[
-            doc.reader && `독자: ${doc.reader}`,
-            doc.cta && `CTA: ${doc.cta}`,
-            doc.objection && `반론: ${doc.objection}`,
-            doc.lengthPages && `${doc.lengthPages}장`,
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="font-heading text-heading-3 text-ink">{doc.title}</h1>
+            <p className="mt-1 text-body-sm text-steel">
+              {[
+                doc.reader && `독자: ${doc.reader}`,
+                doc.cta && `CTA: ${doc.cta}`,
+                doc.objection && `반론: ${doc.objection}`,
+                doc.lengthPages && `${doc.lengthPages}장`,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          </div>
+          <DocActions docId={doc.id} title={doc.title} redirectTo="/docs" />
+        </div>
       </div>
 
       <div className="grid gap-8 md:grid-cols-[280px_1fr]">
@@ -153,12 +159,8 @@ export default async function DocDetailPage({
             {base && target && (
               <span className="text-xs text-muted-foreground">
                 v{base.version} → v{target.version} ·{" "}
-                <span className="text-emerald-600 dark:text-emerald-400">
-                  +{stats.added}
-                </span>{" "}
-                <span className="text-rose-600 dark:text-rose-400">
-                  −{stats.removed}
-                </span>
+                <span className="font-medium text-success">+{stats.added}</span>{" "}
+                <span className="font-medium text-error">−{stats.removed}</span>
               </span>
             )}
           </div>
@@ -178,9 +180,9 @@ export default async function DocDetailPage({
                   key={i}
                   className={
                     r.type === "add"
-                      ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                      ? "bg-success/10 text-success"
                       : r.type === "del"
-                        ? "bg-rose-500/10 text-rose-700 dark:text-rose-300"
+                        ? "bg-error/10 text-error"
                         : "text-muted-foreground"
                   }
                 >

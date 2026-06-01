@@ -17,12 +17,30 @@ export function MessageList({
   }, [turns.length, pending]);
 
   return (
-    <div className="flex flex-col gap-3 py-4">
+    <div className="flex flex-col gap-5 py-6">
       {turns.map((t, i) => (
         <Bubble key={i} role={t.role} text={t.text} />
       ))}
-      {pending && <Bubble role="ai" text="…" />}
+      {pending && <TypingBubble />}
       <div ref={endRef} />
+    </div>
+  );
+}
+
+function TypingBubble() {
+  return (
+    <div className="flex justify-start">
+      <div className="rounded-2xl bg-muted px-4 py-3 text-foreground">
+        <span className="flex items-center gap-1" aria-label="입력 중">
+          {[0, 200, 400].map((delay) => (
+            <span
+              key={delay}
+              className="inline-block size-1.5 animate-bounce rounded-full bg-current opacity-50"
+              style={{ animationDelay: `${delay}ms`, animationDuration: "1s" }}
+            />
+          ))}
+        </span>
+      </div>
     </div>
   );
 }

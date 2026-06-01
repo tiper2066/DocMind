@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { TopNav } from "@/components/nav/TopNav";
+import { Toaster } from "@/components/ui/sonner";
 
 export default async function AppLayout({
   children,
@@ -14,6 +15,7 @@ export default async function AppLayout({
     <div className="flex min-h-svh flex-col">
       <TopNav />
       <div className="flex-1">{children}</div>
+      <Toaster />
     </div>
   );
 }

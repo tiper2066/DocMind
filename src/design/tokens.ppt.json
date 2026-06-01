@@ -100,8 +100,8 @@
   "footerMaster": {
     "body": {
       "bar": { "x": 0, "y": 1044, "w": 1920, "h": 36, "fill": "#F2F2F2" },
-      "securityChip": { "x": 10, "y": 1054, "w": 142, "h": 16 },
-      "wordmark": { "x": 1700, "y": 1056, "w": 210, "h": 14 }
+      "wordmark": { "x": 10, "y": 1054, "w": 142, "h": 16 },
+      "securityChip": { "x": 1700, "y": 1056, "w": 210, "h": 14 }
     }
   },
   "coverMaster": {
@@ -110,7 +110,7 @@
     "awards": { "x": 61, "y": 978, "w": 406, "h": 80 }
   },
   "assets": {
-    "basePath": "src/design/assets/ppt",
+    "basePath": "/ppt-assets",
     "pentaLarge": "penta_black_large.png",
     "pentaSmall": "penta_black_small.png",
     "pentaColor": "penta_color.png",

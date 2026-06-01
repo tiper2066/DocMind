@@ -59,7 +59,7 @@ const C = t.color;
 const S = t.size;
 const TR = t.tracking;
 const FAMILY = t.font.family.heading;
-const W = t.font.weight;
+const W = t.font.weight as { book: 400; medium: 500; bold: 700 };
 
 function rule(x: number, y: number, w = t.rule.accent.width, h = t.rule.accent.height): ShapeBox {
   return { x, y, w, h, fill: C.accent.penta };

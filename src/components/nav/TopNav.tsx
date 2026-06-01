@@ -18,6 +18,8 @@ export async function TopNav() {
             <NavLink href="/kb">지식 베이스</NavLink>
             <NavLink href="/agent">에이전트</NavLink>
             <NavLink href="/docs">문서함</NavLink>
+            <NavLink href="/schedules">스케줄</NavLink>
+            <NavLink href="/settings">설정</NavLink>
             {/* Phase 5: RunningBadge slot — agent_runs.status='running' 카운트 표시 */}
           </nav>
         </div>

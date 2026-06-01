@@ -93,7 +93,7 @@ weight = { bold: 700, medium: 500, book: 400 }
 
 ```
 ─────────────────────────────────────────────────────────  y=1044
-│  [security_level_x]                  [penta_black_small] │
+│  [penta_black_small]                  [security_level_x] │
 │   10/1054 · 142×16                    1700/1056 · 210×14 │
 ─────────────────────────────────────────────────────────  y=1080
    ▲ 36px bar · fill #F2F2F2
@@ -102,8 +102,10 @@ weight = { bold: 700, medium: 500, book: 400 }
 | 요소 | x | y | w | h | 자산/스타일 |
 |---|---|---|---|---|---|
 | Footer bar | 0 | 1044 | 1920 | 36 | fill `color.footer.body` |
-| Security level chip | 10 | 1054 | 142 | 16 | `security_level_{deck.securityLevel}.png` |
-| Penta wordmark | 1700 | 1056 | 210 | 14 | `penta_black_small.png` |
+| Penta wordmark (좌하단) | 10 | 1054 | 142 | 16 | `penta_black_small.png` (자연 비율 8.875 = 142/16) |
+| Security level chip (우하단) | 1700 | 1056 | 210 | 14 | `security_level_{deck.securityLevel}.png` (자연 비율 15.0 = 210/14) |
+
+> 2026-05-29 정정: 이전 문서는 security/wordmark 좌우 위치와 박스 크기가 모두 swap 되어 있었음. 실제 자산 비율 (`penta_black_small.png` 426×48 = 8.875, `security_level_1.png` 630×42 = 15.0) 과 일치하지 않아 stretch 발생. 위 표가 정정본 — `tokens.ppt.json` 도 같이 갱신.
 
 ### 3.2 Cover Master (표지 전용)
 

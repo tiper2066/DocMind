@@ -1,0 +1,82 @@
+import { Inngest } from "inngest";
+import { z } from "zod";
+
+export const inngest = new Inngest({ id: "docmind" });
+
+export const SourceCrawlRequested = z.object({
+  workspaceId: z.string().uuid(),
+  sourceId: z.string().uuid(),
+});
+
+// Dev "지금 감지" 버튼 / cron 공용. data 없이 오면(=cron) 전 워크스페이스 스캔.
+export const AgentDetectRequested = z.object({
+  workspaceId: z.string().uuid().optional(),
+  agentId: z.string().uuid().optional(),
+  sourceId: z.string().uuid().optional(),
+});
+
+// 자율 루프 이벤트 — runId 를 5단계(detect→perceive→reason→act→learn)에 관통.
+export const SourceChanged = z.object({
+  workspaceId: z.string().uuid(),
+  agentId: z.string().uuid(),
+  runId: z.string().uuid(),
+  sourceId: z.string().uuid(),
+  previousHash: z.string().nullable(),
+  nextHash: z.string(),
+  changeRatio: z.number(),
+  newText: z.string(),
+  forced: z.boolean().default(false),
+});
+
+export const SourcePerceived = z.object({
+  workspaceId: z.string().uuid(),
+  agentId: z.string().uuid(),
+  runId: z.string().uuid(),
+  sourceId: z.string().uuid(),
+  perception: z.object({
+    changeType: z.enum(["added", "removed", "modified", "mixed"]),
+    summary: z.string(),
+    sections: z.array(z.string()).default([]),
+  }),
+});
+
+export const SourceImpactReady = z.object({
+  workspaceId: z.string().uuid(),
+  agentId: z.string().uuid(),
+  runId: z.string().uuid(),
+  sourceId: z.string().uuid(),
+  changeType: z.string(),
+  impacts: z.array(
+    z.object({
+      documentId: z.string().uuid(),
+      title: z.string(),
+      priority: z.enum(["high", "medium", "low"]),
+      rationale: z.string(),
+      shouldRegenerate: z.boolean(),
+    }),
+  ),
+});
+
+export const SourceActed = z.object({
+  workspaceId: z.string().uuid(),
+  agentId: z.string().uuid(),
+  runId: z.string().uuid(),
+  sourceId: z.string().uuid(),
+  changeType: z.string(),
+  results: z.array(
+    z.object({
+      documentId: z.string().uuid(),
+      versionId: z.string().uuid(),
+      version: z.number(),
+      approvalId: z.string().uuid(),
+      priority: z.string(),
+    }),
+  ),
+});
+
+export type SourceCrawlRequestedEvent = z.infer<typeof SourceCrawlRequested>;
+export type AgentDetectRequestedEvent = z.infer<typeof AgentDetectRequested>;
+export type SourceChangedEvent = z.infer<typeof SourceChanged>;
+export type SourcePerceivedEvent = z.infer<typeof SourcePerceived>;
+export type SourceImpactReadyEvent = z.infer<typeof SourceImpactReady>;
+export type SourceActedEvent = z.infer<typeof SourceActed>;

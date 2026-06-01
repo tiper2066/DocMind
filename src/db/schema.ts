@@ -154,6 +154,7 @@ export const documentVersions = pgTable("document_versions", {
     .notNull()
     .references(() => documents.id, { onDelete: "cascade" }),
   version: integer("version").notNull(),
+  status: text("status").notNull().default("draft"),
   slidesJson: jsonb("slides_json").notNull(),
   pptxObjectKey: text("pptx_object_key"),
   createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
@@ -267,6 +268,28 @@ export const notifications = pgTable("notifications", {
   }),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
 });
+
+export const learningPatterns = pgTable(
+  "learning_patterns",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    sourceId: uuid("source_id").references(() => sources.id, {
+      onDelete: "set null",
+    }),
+    runId: uuid("run_id").references(() => agentRuns.id, {
+      onDelete: "set null",
+    }),
+    changeType: text("change_type"),
+    patternText: text("pattern_text").notNull(),
+    embedding: vector("embedding", { dimensions: 1024 }),
+    outcome: text("outcome").notNull().default("pending"),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [index("learning_patterns_workspace_idx").on(t.workspaceId)],
+);
 
 export const auditLogs = pgTable("audit_logs", {
   id: uuid("id").defaultRandom().primaryKey(),

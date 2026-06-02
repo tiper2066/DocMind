@@ -15,7 +15,7 @@ export async function TopNav() {
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-6 px-6">
         <div className="flex items-center gap-6">
           <Link href="/" className="font-heading text-heading-5 text-brand">
-            DocMind
+            Mind5
           </Link>
           <nav className="hidden items-center gap-1 md:flex">
             {NAV_ITEMS.map((it) => (

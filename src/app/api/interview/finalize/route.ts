@@ -113,9 +113,16 @@ export async function POST(req: Request) {
 
   await normalizeDocumentSources(doc.id, deck);
 
+  // 카드 제목을 deck 대표 제목(=PPT 표지 제목)과 동기화. 없으면 기존 제목 유지.
+  const coverTitle = deck.meta.title?.trim();
+
   await db
     .update(documents)
-    .set({ status: "ready", updatedAt: new Date() })
+    .set({
+      status: "ready",
+      ...(coverTitle ? { title: coverTitle } : {}),
+      updatedAt: new Date(),
+    })
     .where(eq(documents.id, doc.id));
 
   return NextResponse.json({

@@ -6,6 +6,7 @@ import {
   Code,
   Users,
   Megaphone,
+  Plus,
   type LucideIcon,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -102,6 +103,21 @@ export default function HomePage() {
             </Link>
           );
         })}
+
+        <Card
+          title="프로덕션 버전에서 제공될 예정입니다"
+          className="flex h-full cursor-pointer flex-col bg-muted p-8 ring-0 transition duration-200 hover:-translate-y-0.5 hover:shadow-elevation-2"
+        >
+          <span className="mb-5 inline-flex size-11 items-center justify-center rounded-xl bg-canvas shadow-elevation-1">
+            <Plus className="h-5 w-5 text-steel" aria-hidden />
+          </span>
+          <h3 className="font-heading text-heading-5 text-steel">
+            사용자 유형 추가
+          </h3>
+          <p className="mt-1.5 text-body-sm text-stone">
+            원하는 문서 유형을 직접 만들어 추가합니다.
+          </p>
+        </Card>
       </div>
     </main>
   );

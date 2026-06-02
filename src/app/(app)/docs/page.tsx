@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, ne, sql } from "drizzle-orm";
 
 import { db } from "@/db/client";
 import { documents, documentVersions } from "@/db/schema";
@@ -19,7 +19,6 @@ const TYPE_FILTERS = [
 const STATUS_FILTERS = [
   { key: "", label: "전체 상태" },
   { key: "ready", label: "완료" },
-  { key: "draft", label: "초안" },
 ];
 
 function buildHref(params: { type?: string; status?: string }): string {
@@ -39,7 +38,11 @@ export default async function DocsPage({
   if (!ctx) redirect("/login");
   const { type = "", status = "" } = await searchParams;
 
-  const conds = [eq(documents.workspaceId, ctx.workspaceId)];
+  // 최종 PPT 생성 전(draft)은 문서함에 노출하지 않는다 (미완성 초안 숨김).
+  const conds = [
+    eq(documents.workspaceId, ctx.workspaceId),
+    ne(documents.status, "draft"),
+  ];
   if (type) conds.push(eq(documents.type, type));
   if (status) conds.push(eq(documents.status, status));
 

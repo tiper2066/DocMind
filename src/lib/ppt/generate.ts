@@ -122,8 +122,14 @@ export async function generateDeck(input: GenerateInput): Promise<Deck> {
 
   const alignedSlides = alignAgendaAndSections(slides);
 
+  // 표지(첫 슬라이드) 제목을 deck 의 대표 제목으로 통일 — 미리보기 헤더·PPT 메타·
+  // 문서함 카드가 모두 같은 제목을 쓰도록. 표지가 없으면 입력 제목 유지.
+  const coverSlide = alignedSlides[0];
+  const deckTitle =
+    coverSlide?.kind === "cover" ? coverSlide.title : input.documentTitle;
+
   const meta: DeckMeta = {
-    title: input.documentTitle,
+    title: deckTitle,
     reader: input.answers.reader,
     cta: input.answers.cta,
     objection: input.answers.objection,

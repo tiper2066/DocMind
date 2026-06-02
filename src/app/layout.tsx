@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DocMind",
+  title: "Mind5",
   description: "AI 가 5질문 인터뷰로 PPT 를 자동 생성하는 사내 에이전트",
 };
 

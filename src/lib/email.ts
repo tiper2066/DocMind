@@ -1,7 +1,7 @@
 import { Resend } from "resend";
 
 const apiKey = process.env.RESEND_API_KEY;
-const FROM = process.env.RESEND_FROM ?? "DocMind <onboarding@resend.dev>";
+const FROM = process.env.RESEND_FROM ?? "Mind5 <onboarding@resend.dev>";
 
 const globalForResend = globalThis as unknown as { resendClient?: Resend };
 
@@ -35,7 +35,7 @@ function renderHtml(e: PublishEmail): string {
     : "";
   return `<!doctype html><html><body style="margin:0;background:#f6f6f7;padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
   <div style="max-width:480px;margin:0 auto;background:#fff;border:1px solid #ececec;border-radius:12px;padding:28px">
-    <p style="font-size:13px;color:#888;margin:0 0 8px">DocMind Agent</p>
+    <p style="font-size:13px;color:#888;margin:0 0 8px">Mind5 Agent</p>
     <h1 style="font-size:18px;margin:0 0 12px">문서가 발행되었습니다 · v${e.version}</h1>
     <p style="font-size:15px;margin:0 0 16px"><strong>${escapeHtml(e.documentTitle)}</strong> (v${e.version})</p>
     ${note}
@@ -58,7 +58,7 @@ export async function sendPublishEmail(e: PublishEmail): Promise<EmailSendResult
     const res = await c.emails.send({
       from: FROM,
       to: e.to,
-      subject: `[DocMind] ${e.documentTitle} v${e.version} 발행`,
+      subject: `[Mind5] ${e.documentTitle} v${e.version} 발행`,
       html: renderHtml(e),
     });
     if (res.error) return { status: "failed", error: res.error.message };

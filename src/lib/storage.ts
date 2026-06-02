@@ -97,10 +97,17 @@ export async function uploadPptx(
   if (error) throw error;
 }
 
-export async function createPptxDownloadUrl(key: string): Promise<string> {
+export async function createPptxDownloadUrl(
+  key: string,
+  filename?: string,
+): Promise<string> {
   const { data, error } = await supabase.storage
     .from(BUCKETS.pptx)
-    .createSignedUrl(key, DOWNLOAD_TTL_SECONDS);
+    .createSignedUrl(
+      key,
+      DOWNLOAD_TTL_SECONDS,
+      filename ? { download: filename } : undefined,
+    );
   if (error || !data) {
     throw error ?? new Error("createSignedUrl returned no data");
   }

@@ -26,6 +26,7 @@ export async function GET(
     .select({
       v: documentVersions,
       docWorkspaceId: documents.workspaceId,
+      docTitle: documents.title,
     })
     .from(documentVersions)
     .innerJoin(documents, eq(documents.id, documentVersions.documentId))
@@ -41,8 +42,15 @@ export async function GET(
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
 
+  // 다운로드 파일명: "<문서 제목> v<버전>.pptx" (파일명에 못 쓰는 문자 정리).
+  const safeTitle = (row.docTitle || "document")
+    .replace(/[\\/:*?"<>|]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const downloadName = `${safeTitle} v${row.v.version}.pptx`;
+
   if (row.v.pptxObjectKey) {
-    const url = await createPptxDownloadUrl(row.v.pptxObjectKey);
+    const url = await createPptxDownloadUrl(row.v.pptxObjectKey, downloadName);
     return NextResponse.json({ url, cached: true });
   }
 
@@ -57,6 +65,6 @@ export async function GET(
     .set({ pptxObjectKey: key })
     .where(eq(documentVersions.id, row.v.id));
 
-  const url = await createPptxDownloadUrl(key);
+  const url = await createPptxDownloadUrl(key, downloadName);
   return NextResponse.json({ url, cached: false });
 }

@@ -24,6 +24,8 @@
 
 원본 기획서: [docs/DocMind_Agent_기획서.pdf](docs/DocMind_Agent_기획서.pdf) (6장 가격 정책은 구현 범위 제외)
 
+> **UI 표기명은 "Mind5"** (2026-06-02~). 화면(탭 제목·로그인·네비)과 발행 이메일만 Mind5 로 표기한다. 내부 코드·식별자(Inngest 앱 id `docmind`, Slack `#docmind-demo`, 패키지명)와 본 문서들은 "DocMind" 를 유지한다.
+
 ---
 
 ## 2. 현재 진행 상태
@@ -35,7 +37,7 @@
 | **활성 Phase** | Phase 9 — 데모 준비 & 최종 검증 |
 | **완료 Phase** | Phase 0, Phase 1, Phase 2, Phase 3, Phase 4, Phase 5, Phase 6, Phase 7, Phase 8 |
 | **다음 액션** | Phase 8 **전체 완료**(토큰추출→컴포넌트매핑→화면적용→다크모드 + 사용자 피드백 UI개선 + QA/검증). **다음 = Phase 9**: `scripts/seed-demo.ts`·`force-change.ts`, `/demo/playback`, 리허설(Demo A<3분·B<2분), 7항목 통과 기준. **이월 1건**: WCAG AA 색 대비 정량 감사(Lighthouse/axe)를 Phase 9 리허설에서 수행. |
-| **마지막 갱신** | 2026-06-01 (Phase 8 ✅ 마감 — 검증 grep 3종 통과(hex 0·팔레트 0·PPT↔웹 토큰 분리 0). 작업 중 사용자 피드백 UI개선 반영: 모바일 햄버거 Sheet 네비, base-ui 커스텀 Select, 문서 hard-delete, 인터뷰 단계 되돌리기(rewind), 채팅 중앙 로딩+타이핑 점 애니메이션, 컨테이너 폭/여백 통일, 로그인 collapse 버그(Tailwind spacing 충돌) 수정. lint·build PASS) |
+| **마지막 갱신** | 2026-06-02 (Phase 9 진행 중 — 데모 직전 UI 폴리시 & 문서 제목 정합 일괄 반영: **UI 브랜드명 Mind5**, **미완성 초안 문서함 숨김**(`status!=draft`), **deck 제목 단일화**(`meta.title`=표지 제목)+카드 동기화(finalize·generate 양 경로), `.pptx` 파일명=`"<제목> v<버전>"`, 인터뷰 단계 번호원+연결선 위저드, 버튼 hover 피드백(배경+그림자), 홈 '사용자 유형 추가' 카드(프로덕션 예정 UI), 홈 메뉴 제거. lint·build PASS. 상세 결정은 Plan 16장 2026-06-02 항목. **보류**: 지연 생성(생성 버튼 전 DB 미생성)은 프로덕션) |
 | **블로커** | (없음) |
 
 상세 체크박스는 [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) 15장에 있다. 본 표는 그 헤더만 옮긴 것이라고 생각하면 된다.
@@ -151,7 +153,7 @@ pnpm verify:agent         # 자율 루프 e2e: forced content_hash → 5단계 e
 - **Inngest step 미사용** → `step.run("name", async () => ...)` 로 감싸지 않으면 한 step 실패가 전체 재시도로 번진다.
 - **Inngest v4 `createFunction` 시그니처** → v3 의 3-인자(`(opts, trigger, handler)`) 가 아니라 **2-인자(`(opts, handler)`)** 다. trigger 는 `opts.triggers: [{ event: "..." }]` 배열로 들어간다. 3-인자로 쓰면 `TS2554: Expected 2 arguments, but got 3` + handler 의 `event/step` 가 `any` 가 된다.
 - **Inngest v4 `onFailure` 의 원본 페이로드 경로** → `({ event, error }) => ...` 에서 원본 이벤트는 `event.data.event.data` (NOT `event.data`). `event.data` 는 `{ function_id, run_id, error, event: <원본 페이로드> }` 인 wrapper 다.
-- **Inngest dev 모드 활성화 = `INNGEST_DEV=1`** → v4 SDK 는 기본적으로 cloud 모드(시그니처 검증). 로컬에서 `inngest-cli dev` 를 쓰려면 Next 앱과 SDK send 양쪽 모두 `INNGEST_DEV=1` 가 env 에 있어야 한다. 안 그러면 (a) `/api/inngest` 가 `Signature validation failed` 로 401, (b) `inngest.send()` 가 cloud 로 흘러서 dev 서버는 이벤트를 못 본다. **반드시 `INNGEST_DEV=1 pnpm dev`** 로 띄울 것. 스크립트도 같은 env 로.
+- **Inngest dev 모드 활성화 = `INNGEST_DEV=1`** → v4 SDK 는 기본적으로 cloud 모드(시그니처 검증). 로컬에서 `inngest-cli dev` 를 쓰려면 Next 앱과 SDK send 양쪽 모두 `INNGEST_DEV=1` 가 env 에 있어야 한다. 안 그러면 (a) `/api/inngest` 가 `Signature validation failed` 로 401, (b) `inngest.send()` 가 cloud 로 흘러서 dev 서버는 이벤트를 못 본다. **반드시 `INNGEST_DEV=1 pnpm dev`** 로 띄울 것. 스크립트도 같은 env 로. **(2026-06-02 관찰)** Next 16 은 요청을 처리하는 `next-server` 를 별도 워커 프로세스로 띄우는데, 셸에서 앞에 붙인 `INNGEST_DEV=1` 이 그 워커까지 전파되지 않는 경우가 있다 (부모 `pnpm dev` 프로세스엔 있는데 `next-server` env 엔 없음 → `inngest.send()` 가 여전히 cloud 모드 → dev 서버 이벤트 0건, 소스가 `crawling` 에서 무한 정체. 증상 진단: `curl localhost:8288/v1/events` 가 빈 배열). **확실하게 하려면 `.env.local` 에 `INNGEST_DEV=1` 을 넣어** Next 가 런타임에 모든 워커로 주입하게 한다.
 - **ES import hoist vs env 초기화** → `db/client.ts` 처럼 import 시점에 `process.env.X` 를 검증/사용하는 모듈을 스크립트에서 import 할 때, 같은 파일 안의 `dotenv.config()` 호출은 hoist 된 import 이후에 실행되므로 무용지물이다. 해결: **Node 22 의 `tsx --env-file=.env.local script.ts`** 사용 (Node 가 인터프리터 시작 전 .env 적용). `INNGEST_DEV` 등도 같은 이유로 `npm run` script 의 명령 앞부분에 박는다 (`INNGEST_DEV=1 tsx ...`).
 - **Supabase Storage 키 클라이언트 생성** → 클라가 키 이름 정하면 덮어쓰기 공격 가능. 서버에서 `${workspaceId}/${ulid()}/${safeName}` 강제.
 - **콜드스타트 (Supabase 는 없지만 LLM·Inngest 는 첫 호출 지연)** → 데모 10분 전 warmup ping 1회.
@@ -165,6 +167,7 @@ pnpm verify:agent         # 자율 루프 e2e: forced content_hash → 5단계 e
 - **`<html>` hydration mismatch (`data-hwp-extension` 등)** → 서버 HTML 엔 없고 클라엔 있는 속성 경고는 **브라우저 확장프로그램**이 React 로드 전 `<html>` 에 주입한 것(앱 버그 아님). 동반되는 `message channel closed before a response` 도 확장 메시징 노이즈. 시크릿 창이면 사라짐. 완화: [src/app/layout.tsx](src/app/layout.tsx) `<html suppressHydrationWarning>` (해당 요소 속성만 무시, 자식 검사는 유지).
 - **Voyage 무료 티어 = 3 RPM / 10K TPM** → 결제수단 미등록 시 분당 3 호출 한도. 인터뷰 5문답 + KB 매칭 + generate(11+ 호출) 가 1~2분에 몰리면 즉시 429 (`voyage 429: You have not yet added your payment method ...`). **영구 해결**: [dashboard.voyageai.com](https://dashboard.voyageai.com) 에서 결제수단 등록 → 표준 limit 으로 자동 복구. **앱 측 방어**: (a) [src/lib/embeddings.ts](src/lib/embeddings.ts) 가 query embedding 을 process-level Map cache (256 entry LRU) + 429 시 25s 대기 후 1회 재시도, (b) 인터뷰 turn 은 `sources` step + 초기 SSR 에서만 KB 매칭 (다른 turn 은 직전 매칭을 store 가 유지), (c) generate 는 모든 slide-fill query 를 단일 batched `embed()` 호출로 묶음. 총 호출 수 17 → 4 (75% 절감).
 - **Tailwind v4 `@theme` 의 `--spacing-<name>` 이 내장 사이즈 스케일을 가림** → `@theme` 에 `--spacing-sm/md/lg/xl` 같은 **t-shirt 명명 키**를 추가하면 `max-w-sm`·`w-md`·`max-w-lg` 등 사이징 유틸이 `--container-*`(24rem 등) 대신 그 spacing 값(12px 등)으로 인라인된다. 증상: `max-w-sm` 쓴 요소(로그인 카드·Dialog·Sheet·SourceSheet·DropZone)가 12~16px 로 collapse — 배경/보더 없으면 안 보이다가 카드 배경 넣는 순간 드러남. **해결: 명명형 `--spacing-*` 토큰을 두지 말 것.** DESIGN 간격(4·8·12·16·24·32·48·64px)은 Tailwind 기본 숫자 스케일(`p-1/2/3/4/6/8/12/16`)과 1:1 이라 명명 토큰이 불필요. (Phase 8 step1 에서 넣었다가 제거함 — [globals.css](src/app/globals.css))
+- **문서 제목 출처 3원화** → 한 문서의 제목이 세 군데서 나온다: (a) `documents.title` (문서함 카드·상세), (b) `deck.meta.title` (미리보기 헤더·pptx `pres.title`), (c) `deck.slides[0].title` (PPT 표지 텍스트 — LLM 이 생성하는 풍부한 제목). 손대지 않으면 (a)(b)=placeholder, (c)=풍부한 제목으로 어긋난다. **통일 규칙**: [generate.ts](src/lib/ppt/generate.ts) 가 `meta.title = 표지(첫 슬라이드) 제목` 으로 맞추고(→(b) 해결), 생성 라우트가 `documents.title` 도 표지 제목으로 동기화(→(a) 해결). **Mode A 실제 생성 경로는 [api/interview/finalize](src/app/api/interview/finalize/route.ts)** 다 (`/api/generate` 는 재생성 경로) — 동기화를 한쪽만 넣으면 카드 제목이 안 바뀌니 **양쪽 모두**에 넣을 것.
 
 ---
 

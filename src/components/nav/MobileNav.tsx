@@ -33,7 +33,7 @@ export function MobileNav({ email }: { email?: string | null }) {
 
       <SheetContent side="right" className="w-72">
         <SheetHeader>
-          <SheetTitle className="text-brand">DocMind</SheetTitle>
+          <SheetTitle className="text-brand">Mind5</SheetTitle>
         </SheetHeader>
 
         <nav className="flex flex-col gap-1 px-3">

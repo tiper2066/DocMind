@@ -85,14 +85,17 @@ export const agentDetect = inngest.createFunction(
         .select({
           id: sources.id,
           workspaceId: sources.workspaceId,
+          kind: sources.kind,
           contentHash: sources.contentHash,
         })
         .from(sources)
-        .where(and(eq(sources.kind, "url"), eq(sources.status, "ready")));
+        .where(eq(sources.status, "ready"));
       return rows.filter((r) => {
-        if (data.sourceId && r.id !== data.sourceId) return false;
         if (data.workspaceId && r.workspaceId !== data.workspaceId) return false;
-        return true;
+        // 명시적 트리거(소스 "수정" 등 sourceId 지정)면 그 소스만 — 종류 무관(파일 포함).
+        // cron 자동 스캔(sourceId 없음)은 외부에서 바뀌는 URL 소스만 재크롤한다.
+        if (data.sourceId) return r.id === data.sourceId;
+        return r.kind === "url";
       });
     });
 
@@ -645,7 +648,7 @@ export const agentGenerateScheduled = inngest.createFunction(
             reader: t.reader,
             cta: t.cta,
             objection: t.objection,
-            sources: t.sources,
+            keyMessage: t.keyMessage,
             length: t.length,
           },
           lengthPages,

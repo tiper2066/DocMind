@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { and, desc, eq, ne, sql } from "drizzle-orm";
 
@@ -6,46 +5,16 @@ import { db } from "@/db/client";
 import { documents, documentVersions } from "@/db/schema";
 import { getWorkspaceContext } from "@/lib/rbac";
 import { DOC_TYPE_LABELS } from "@/lib/interview/machine";
-import { Badge } from "@/components/ui/badge";
-import { DocActions } from "@/components/docs/DocActions";
+import { DocsFolderView, type DocCard } from "@/components/docs/DocsFolderView";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const TYPE_FILTERS = [
-  { key: "", label: "전체 유형" },
-  ...Object.entries(DOC_TYPE_LABELS).map(([key, label]) => ({ key, label })),
-];
-const STATUS_FILTERS = [
-  { key: "", label: "전체 상태" },
-  { key: "ready", label: "완료" },
-];
-
-function buildHref(params: { type?: string; status?: string }): string {
-  const sp = new URLSearchParams();
-  if (params.type) sp.set("type", params.type);
-  if (params.status) sp.set("status", params.status);
-  const q = sp.toString();
-  return q ? `/docs?${q}` : "/docs";
-}
-
-export default async function DocsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ type?: string; status?: string }>;
-}) {
+export default async function DocsPage() {
   const ctx = await getWorkspaceContext();
   if (!ctx) redirect("/login");
-  const { type = "", status = "" } = await searchParams;
 
   // 최종 PPT 생성 전(draft)은 문서함에 노출하지 않는다 (미완성 초안 숨김).
-  const conds = [
-    eq(documents.workspaceId, ctx.workspaceId),
-    ne(documents.status, "draft"),
-  ];
-  if (type) conds.push(eq(documents.type, type));
-  if (status) conds.push(eq(documents.status, status));
-
   const docs = await db
     .select({
       id: documents.id,
@@ -53,9 +22,17 @@ export default async function DocsPage({
       type: documents.type,
       status: documents.status,
       updatedAt: documents.updatedAt,
+      // New = 생성 24시간 이내. Update = 갱신 24시간 이내(+ 버전>1 조건은 아래 map 에서).
+      createdRecent: sql<boolean>`${documents.createdAt} > now() - interval '24 hours'`,
+      updatedRecent: sql<boolean>`${documents.updatedAt} > now() - interval '24 hours'`,
     })
     .from(documents)
-    .where(and(...conds))
+    .where(
+      and(
+        eq(documents.workspaceId, ctx.workspaceId),
+        ne(documents.status, "draft"),
+      ),
+    )
     .orderBy(desc(documents.updatedAt));
 
   const agg = await db
@@ -70,70 +47,25 @@ export default async function DocsPage({
     .groupBy(documentVersions.documentId);
   const aggByDoc = new Map(agg.map((a) => [a.documentId, a]));
 
+  const cards: DocCard[] = docs.map((d) => {
+    const a = aggByDoc.get(d.id);
+    return {
+      id: d.id,
+      title: d.title,
+      type: d.type,
+      status: d.status,
+      updatedAt: d.updatedAt.toISOString(),
+      latest: a?.latest ?? null,
+      count: a?.count ?? 0,
+      isNew: d.createdRecent,
+      // 버전이 2개 이상(재생성·에이전트 갱신)이고 24h 이내 갱신된 경우만 "Update".
+      isUpdated: d.updatedRecent && (a?.count ?? 0) > 1,
+    };
+  });
+
   return (
     <main className="mx-auto max-w-6xl px-6 py-8">
-      <h1 className="font-heading text-heading-3 text-ink">문서함</h1>
-      <p className="mt-1 mb-6 text-body-sm text-steel">
-        생성·갱신된 문서와 버전 이력을 확인합니다.
-      </p>
-
-      <div className="mb-6 space-y-2">
-        <div className="flex flex-wrap gap-1.5">
-          {TYPE_FILTERS.map((f) => (
-            <Link key={f.key || "all"} href={buildHref({ type: f.key, status })}>
-              <Badge variant={type === f.key ? "default" : "outline"}>
-                {f.label}
-              </Badge>
-            </Link>
-          ))}
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {STATUS_FILTERS.map((f) => (
-            <Link key={f.key || "all"} href={buildHref({ type, status: f.key })}>
-              <Badge variant={status === f.key ? "default" : "outline"}>
-                {f.label}
-              </Badge>
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      {docs.length === 0 ? (
-        <p className="rounded-lg border border-dashed p-12 text-center text-sm text-muted-foreground">
-          조건에 맞는 문서가 없습니다.
-        </p>
-      ) : (
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {docs.map((d) => {
-            const a = aggByDoc.get(d.id);
-            return (
-              <li key={d.id} className="relative">
-                <Link
-                  href={`/docs/${d.id}`}
-                  className="block rounded-lg bg-canvas p-4 pr-12 ring-1 ring-hairline transition duration-200 hover:-translate-y-0.5 hover:bg-surface hover:shadow-elevation-2"
-                >
-                  <div className="mb-2 flex items-center gap-2">
-                    <Badge variant="secondary">
-                      {DOC_TYPE_LABELS[d.type] ?? d.type}
-                    </Badge>
-                    <Badge variant={d.status === "ready" ? "outline" : "ghost"}>
-                      {d.status === "ready" ? "완료" : "초안"}
-                    </Badge>
-                  </div>
-                  <div className="line-clamp-2 text-sm font-medium">{d.title}</div>
-                  <div className="mt-3 text-xs text-muted-foreground">
-                    {a ? `v${a.latest} · ${a.count}개 버전` : "버전 없음"} ·{" "}
-                    {d.updatedAt.toLocaleDateString("ko-KR")}
-                  </div>
-                </Link>
-                <div className="absolute top-3 right-3 z-10">
-                  <DocActions docId={d.id} title={d.title} />
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      <DocsFolderView docs={cards} typeLabels={DOC_TYPE_LABELS} />
     </main>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 
@@ -33,7 +34,29 @@ export function MobileNav({ email }: { email?: string | null }) {
 
       <SheetContent side="right" className="w-72">
         <SheetHeader>
-          <SheetTitle className="text-brand">Mind5</SheetTitle>
+          <SheetTitle>
+            <Link
+              href="/"
+              onClick={() => setOpen(false)}
+              className="flex items-center"
+              aria-label="Mind5 홈"
+            >
+              <Image
+                src="/Mind5.svg"
+                alt="Mind5"
+                width={71}
+                height={20}
+                className="block dark:hidden"
+              />
+              <Image
+                src="/Mind5-dark.svg"
+                alt="Mind5"
+                width={71}
+                height={20}
+                className="hidden dark:block"
+              />
+            </Link>
+          </SheetTitle>
         </SheetHeader>
 
         <nav className="flex flex-col gap-1 px-3">
@@ -50,7 +73,7 @@ export function MobileNav({ email }: { email?: string | null }) {
                   "flex items-center gap-3 rounded-md px-3 py-2.5 text-base transition-colors",
                   active
                     ? "bg-surface font-medium text-brand"
-                    : "text-steel hover:bg-surface hover:text-ink",
+                    : "text-ink hover:bg-surface hover:text-brand",
                 )}
               >
                 <Icon className="size-4 shrink-0" aria-hidden />

@@ -14,7 +14,7 @@ export function InsightBox({
       <div className="flex items-center gap-2">
         <Lightbulb className="h-4 w-4 text-brand-navy" aria-hidden />
         <h3 className="font-heading text-heading-5 text-brand-navy">
-          KB 매칭 인사이트
+          매칭 인사이트
         </h3>
       </div>
 

@@ -14,6 +14,9 @@
     "verify:kb-url": "INNGEST_DEV=1 tsx --env-file=.env.local scripts/verify-kb-url.ts",
     "verify:kb-file": "INNGEST_DEV=1 tsx --env-file=.env.local scripts/verify-kb-file.ts",
     "verify:agent": "INNGEST_DEV=1 tsx --env-file=.env.local scripts/force-change.ts",
+    "demo:pending": "INNGEST_DEV=1 KEEP_PENDING=1 tsx --env-file=.env.local scripts/force-change.ts",
+    "seed:demo": "INNGEST_DEV=1 tsx --env-file=.env.local scripts/seed-demo.ts",
+    "warmup": "INNGEST_DEV=1 tsx --env-file=.env.local scripts/warmup.ts",
     "inngest": "npx --yes inngest-cli@latest dev -u http://localhost:3000/api/inngest"
   },
   "dependencies": {

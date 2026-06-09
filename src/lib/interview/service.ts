@@ -72,7 +72,9 @@ export async function kbMatch(
   return kbMatchByVector(workspaceId, qVec, k);
 }
 
-const STEPS_NEEDING_FRESH_KB = new Set(["sources"]);
+// keyMessage 로 교체되며 "소스 고르기" 단계가 사라져, 특정 step 에서 KB 를 다시
+// 끌어올 필요가 없어졌다(초기 SSR·forceMatch 시에만 매칭, 이후는 store 유지).
+const STEPS_NEEDING_FRESH_KB = new Set<string>([]);
 
 function shouldFetchKb(
   step: AnswerableStep,

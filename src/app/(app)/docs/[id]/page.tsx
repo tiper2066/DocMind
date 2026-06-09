@@ -9,6 +9,8 @@ import { DOC_TYPE_LABELS } from "@/lib/interview/machine";
 import { diffDecks, diffStats } from "@/lib/diff";
 import { Badge } from "@/components/ui/badge";
 import { DocActions } from "@/components/docs/DocActions";
+import { DocTitleEditor } from "@/components/docs/DocTitleEditor";
+import { VersionCard } from "@/components/docs/VersionCard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -76,7 +78,7 @@ export default async function DocDetailPage({
         </div>
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <h1 className="font-heading text-heading-3 text-ink">{doc.title}</h1>
+            <DocTitleEditor docId={doc.id} title={doc.title} />
             <p className="mt-1 text-body-sm text-steel">
               {[
                 doc.reader && `독자: ${doc.reader}`,
@@ -100,52 +102,24 @@ export default async function DocDetailPage({
           <ol className="space-y-3">
             {versions.map((v) => {
               const b = versionStatusBadge(v.status);
-              const isTarget = target?.id === v.id;
-              const isBase = base?.id === v.id;
               return (
-                <li
+                <VersionCard
                   key={v.id}
-                  className={
-                    isTarget || isBase
-                      ? "rounded-lg border-2 border-primary p-3"
-                      : "rounded-lg border p-3"
+                  versionId={v.id}
+                  versionLabel={`v${v.version}`}
+                  statusVariant={b.variant}
+                  statusLabel={b.label}
+                  changeNote={v.changeNote}
+                  createdAtLabel={v.createdAt.toLocaleString("ko-KR")}
+                  previewHref={`/deck/${v.id}`}
+                  compareHref={
+                    latest && v.id !== latest.id
+                      ? `/docs/${id}?base=${v.id}&target=${latest.id}`
+                      : null
                   }
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium">v{v.version}</span>
-                    <Badge variant={b.variant}>{b.label}</Badge>
-                  </div>
-                  {v.changeNote && (
-                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                      {v.changeNote}
-                    </p>
-                  )}
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    {v.createdAt.toLocaleString("ko-KR")}
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
-                    <Link
-                      href={`/deck/${v.id}`}
-                      className="text-primary hover:underline"
-                    >
-                      미리보기
-                    </Link>
-                    <a
-                      href={`/api/generate/${v.id}/pptx`}
-                      className="text-primary hover:underline"
-                    >
-                      .pptx
-                    </a>
-                    {latest && v.id !== latest.id && (
-                      <Link
-                        href={`/docs/${id}?base=${v.id}&target=${latest.id}`}
-                        className="text-muted-foreground hover:underline"
-                      >
-                        최신과 비교
-                      </Link>
-                    )}
-                  </div>
-                </li>
+                  selected={target?.id === v.id || base?.id === v.id}
+                  isLatest={latest?.id === v.id}
+                />
               );
             })}
           </ol>

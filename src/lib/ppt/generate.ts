@@ -40,12 +40,14 @@ export type GenerateInput = {
     reader: string;
     cta: string;
     objection: string;
-    sources: string;
+    keyMessage: string;
     length: string;
   };
   lengthPages: number;
   securityLevel: 1 | 2 | 3 | 4 | 5;
   author?: string;
+  // 사용자가 상세 페이지에서 제목을 직접 정했을 때. 표지·meta 를 LLM 제목 대신 이 값으로 고정.
+  forcedTitle?: string;
 };
 
 export async function generateDeck(input: GenerateInput): Promise<Deck> {
@@ -57,7 +59,7 @@ export async function generateDeck(input: GenerateInput): Promise<Deck> {
     input.answers.reader,
     input.answers.cta,
     input.answers.objection,
-    input.answers.sources,
+    input.answers.keyMessage,
   ]
     .filter(Boolean)
     .join(" ");
@@ -120,13 +122,23 @@ export async function generateDeck(input: GenerateInput): Promise<Deck> {
     ),
   );
 
-  const alignedSlides = alignAgendaAndSections(slides);
+  let alignedSlides = alignAgendaAndSections(slides);
+
+  // 사용자가 직접 정한 제목(forcedTitle)이 있으면 표지 텍스트를 그 값으로 덮어쓴다.
+  const forced = input.forcedTitle?.trim();
+  if (forced && alignedSlides[0]?.kind === "cover") {
+    alignedSlides = alignedSlides.map((s, i) =>
+      i === 0 && s.kind === "cover" ? { ...s, title: forced } : s,
+    );
+  }
 
   // 표지(첫 슬라이드) 제목을 deck 의 대표 제목으로 통일 — 미리보기 헤더·PPT 메타·
-  // 문서함 카드가 모두 같은 제목을 쓰도록. 표지가 없으면 입력 제목 유지.
+  // 문서함 카드가 모두 같은 제목을 쓰도록. 표지가 없으면 forcedTitle→입력 제목 순.
   const coverSlide = alignedSlides[0];
   const deckTitle =
-    coverSlide?.kind === "cover" ? coverSlide.title : input.documentTitle;
+    coverSlide?.kind === "cover"
+      ? coverSlide.title
+      : (forced ?? input.documentTitle);
 
   const meta: DeckMeta = {
     title: deckTitle,
@@ -228,7 +240,7 @@ async function proposeOutline(args: {
         content: [
           {
             type: "text",
-            text: `<documentType>${args.docTypeLabel}</documentType>\n<lengthPages>${args.lengthPages}</lengthPages>\n<answers>\n  reader: ${args.answers.reader}\n  cta: ${args.answers.cta}\n  objection: ${args.answers.objection}\n  sources: ${args.answers.sources}\n  length: ${args.answers.length}\n</answers>`,
+            text: `<documentType>${args.docTypeLabel}</documentType>\n<lengthPages>${args.lengthPages}</lengthPages>\n<answers>\n  reader: ${args.answers.reader}\n  cta: ${args.answers.cta}\n  objection: ${args.answers.objection}\n  keyMessage: ${args.answers.keyMessage}\n  length: ${args.answers.length}\n</answers>`,
           },
           ...(args.kbHeadline
             ? [contextBlock("kbContext", args.kbHeadline)]
@@ -308,7 +320,7 @@ async function fillSlideOnce(args: FillArgs): Promise<Record<string, unknown>> {
         content: [
           {
             type: "text",
-            text: `<documentType>${args.docTypeLabel}</documentType>\n<documentTitle>${args.input.documentTitle}</documentTitle>\n<slideIndex>${args.slideIndex + 1}/${args.totalSlides}</slideIndex>\n<kind>${args.kind}</kind>${args.sectionIndex ? `\n<sectionIndex>${args.sectionIndex}</sectionIndex>` : ""}\n<outline>${args.outline.join(", ")}</outline>\n<answers>\n  reader: ${args.input.answers.reader}\n  cta: ${args.input.answers.cta}\n  objection: ${args.input.answers.objection}\n  sources: ${args.input.answers.sources}\n  length: ${args.input.answers.length}\n</answers>`,
+            text: `<documentType>${args.docTypeLabel}</documentType>\n<documentTitle>${args.input.documentTitle}</documentTitle>\n<slideIndex>${args.slideIndex + 1}/${args.totalSlides}</slideIndex>\n<kind>${args.kind}</kind>${args.sectionIndex ? `\n<sectionIndex>${args.sectionIndex}</sectionIndex>` : ""}\n<outline>${args.outline.join(", ")}</outline>\n<answers>\n  reader: ${args.input.answers.reader}\n  cta: ${args.input.answers.cta}\n  objection: ${args.input.answers.objection}\n  keyMessage: ${args.input.answers.keyMessage}\n  length: ${args.input.answers.length}\n</answers>`,
           },
           ...(kbText ? [contextBlock("kbContext", kbText)] : []),
           {

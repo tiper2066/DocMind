@@ -7,7 +7,7 @@ export const ScheduleTemplate = z.object({
   reader: z.string().min(1).max(60),
   cta: z.string().min(1).max(60),
   objection: z.string().min(1).max(60),
-  sources: z.string().min(1).max(200),
+  keyMessage: z.string().min(1).max(200),
   length: z.string().min(1).max(40),
   securityLevel: z
     .union([

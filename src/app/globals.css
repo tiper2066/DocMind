@@ -47,6 +47,20 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* 입력 중 "..." 점 애니메이션 — 기본 animate-bounce 는 translateY(-25%)라
+     6px 점에서 이동 거리가 ~1.5px 로 거의 안 보임. 고정 픽셀 이동으로 키운다. */
+  --animate-dot-bounce: dot-bounce 1s infinite;
+  @keyframes dot-bounce {
+    0%,
+    60%,
+    100% {
+      transform: translateY(0);
+    }
+    30% {
+      transform: translateY(-6px);
+    }
+  }
 }
 
 /* ── DocMind 웹 디자인 토큰 (Phase 8 · docs/DESIGN.md · 단일 출처 tokens.web.json) ──
@@ -86,6 +100,7 @@
   --color-tint-cream: var(--w-card-tint-cream);
   --color-tint-gray: var(--w-card-tint-gray);
   --color-canvas: var(--w-canvas);
+  --color-page: var(--w-page);
   --color-surface: var(--w-surface);
   --color-surface-soft: var(--w-surface-soft);
   --color-hairline: var(--w-hairline);
@@ -187,6 +202,7 @@
   --w-card-tint-cream: #f7f3ea;
   --w-card-tint-gray: #f1f1ef;
   --w-canvas: #ffffff;
+  --w-page: #f5f7f8;
   --w-surface: #f7f7f5;
   --w-surface-soft: #efefed;
   --w-hairline: #e9e9e7;
@@ -209,6 +225,7 @@
 .dark {
   /* 따뜻한 다크 톤(warm neutral, r≥g≥b) — tokens.web.json darkColors 미러. 순흑 #000 금지. */
   --w-canvas: #1a1917;
+  --w-page: var(--w-canvas);
   --w-surface: #242220;
   --w-surface-soft: #2d2a27;
   --w-hairline: #36322e;
@@ -299,7 +316,7 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-page text-foreground;
   }
   html {
     @apply font-sans;

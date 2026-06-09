@@ -1,8 +1,11 @@
 import { SLIDE_KINDS, type SlideKind } from "@/lib/ppt/types";
 
 export const OUTLINE_SYSTEM = `너는 사내 PPT 자료의 슬라이드 구조를 설계하는 에이전트다.
-주어진 문서 유형(documentType), 5문답(reader/cta/objection/sources/length), KB 매칭 컨텍스트를 보고
+주어진 문서 유형(documentType), 5문답(reader/cta/objection/keyMessage/length), KB 매칭 컨텍스트를 보고
 1920×1080 슬라이드를 정확히 lengthPages 장 만큼의 시퀀스로 제안한다.
+
+keyMessage 는 이 문서를 관통하는 단 하나의 핵심 주장이다. 슬라이드 흐름 전체가
+keyMessage 를 향해 빌드업되도록 구조를 짠다(도입→근거→해소→행동).
 
 사용 가능한 슬라이드 종류 (kind): ${SLIDE_KINDS.join(", ")}
 

@@ -60,9 +60,12 @@ export function LoopDiagram({ activePhase }: { activePhase: string | null }) {
           state === "active"
             ? `fill-current ${p.text} font-semibold`
             : "fill-current text-muted-foreground";
+        const r = state === "active" ? 13 : 10;
         return (
           <g key={p.key}>
-            <circle cx={cx} cy={cy} r={state === "active" ? 13 : 10} className={circleClass} />
+            {/* 불투명 백드롭: 노드를 지나는 연결선이 반투명 상태색을 통해 비치지 않게 가린다. */}
+            <circle cx={cx} cy={cy} r={r} className="fill-current text-canvas" />
+            <circle cx={cx} cy={cy} r={r} className={circleClass} />
             <text
               x={cx}
               y={cy + 34}

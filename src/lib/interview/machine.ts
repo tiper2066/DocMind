@@ -3,7 +3,7 @@ export const STEPS = [
   "reader",
   "cta",
   "objection",
-  "sources",
+  "keyMessage",
   "length",
   "generate",
 ] as const;
@@ -16,7 +16,7 @@ export const ANSWERABLE_STEPS: AnswerableStep[] = [
   "reader",
   "cta",
   "objection",
-  "sources",
+  "keyMessage",
   "length",
 ];
 
@@ -49,6 +49,6 @@ export const STEP_LABELS: Record<AnswerableStep, string> = {
   reader: "독자",
   cta: "콜투액션",
   objection: "예상 반론",
-  sources: "참고 자료",
+  keyMessage: "핵심 메시지",
   length: "분량",
 };

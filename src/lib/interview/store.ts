@@ -97,14 +97,10 @@ export function buildInitialTurns(init: InitialChatState): ChatTurn[] {
 function buildInitialQuestionByStep(
   init: InitialChatState,
 ): Partial<Record<AnswerableStep, QInfo>> {
+  // 복원 세션의 과거 단계 질문 원문은 보관돼 있지 않다. placeholder("(독자 질문)" 등)를
+  // map 에 넣으면 되돌아갈 때 그 자리표시자가 그대로 노출되므로, 실제 질문(현재 단계의
+  // initialQuestion)만 담는다. 과거 단계로 되돌아가면 서버가 해당 단계 질문을 재생성한다.
   const map: Partial<Record<AnswerableStep, QInfo>> = {};
-  for (const [step, answer] of Object.entries(init.answers)) {
-    if (!answer || !isAnswerable(step as Step)) continue;
-    map[step as AnswerableStep] = {
-      aiMessage: restoredQuestionText(step),
-      quickReplies: [],
-    };
-  }
   if (init.initialQuestion && isAnswerable(init.currentStep)) {
     map[init.currentStep as AnswerableStep] = {
       aiMessage: init.initialQuestion.aiMessage,

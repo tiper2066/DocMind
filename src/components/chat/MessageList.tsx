@@ -35,8 +35,8 @@ function TypingBubble() {
           {[0, 200, 400].map((delay) => (
             <span
               key={delay}
-              className="inline-block size-1.5 animate-bounce rounded-full bg-current opacity-50"
-              style={{ animationDelay: `${delay}ms`, animationDuration: "1s" }}
+              className="inline-block size-1.5 animate-dot-bounce rounded-full bg-current opacity-50"
+              style={{ animationDelay: `${delay}ms` }}
             />
           ))}
         </span>

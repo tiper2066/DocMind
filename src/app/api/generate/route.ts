@@ -79,12 +79,13 @@ export async function POST(req: Request) {
       reader: answers.reader!,
       cta: answers.cta!,
       objection: answers.objection!,
-      sources: answers.sources!,
+      keyMessage: answers.keyMessage!,
       length: answers.length!,
     },
     lengthPages: doc.lengthPages ?? deriveLength(answers.length),
     securityLevel: parsed.data.securityLevel,
     author: doc.createdBy ? undefined : undefined,
+    forcedTitle: doc.titleManual ? doc.title : undefined,
   });
 
   const [latest] = await db
@@ -109,14 +110,16 @@ export async function POST(req: Request) {
 
   await normalizeDocumentSources(doc.id, deck);
 
-  // 카드 제목을 deck 대표 제목(=PPT 표지 제목)과 동기화. 없으면 기존 제목 유지.
+  // 카드 제목을 deck 대표 제목(=PPT 표지 제목)과 동기화. 단 사용자가 직접 정한
+  // 제목(titleManual)이면 덮어쓰지 않는다(재생성 휘발 방지).
   const coverTitle = deck.meta.title?.trim();
+  const syncTitle = !doc.titleManual && coverTitle;
 
   await db
     .update(documents)
     .set({
       status: "ready",
-      ...(coverTitle ? { title: coverTitle } : {}),
+      ...(syncTitle ? { title: coverTitle } : {}),
       updatedAt: new Date(),
     })
     .where(eq(documents.id, doc.id));

@@ -9,12 +9,12 @@ export const dynamic = "force-dynamic";
 export default async function NewChatPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string }>;
+  searchParams: Promise<{ type?: string; folder?: string }>;
 }) {
   const ctx = await getWorkspaceContext();
   if (!ctx) redirect("/login");
 
-  const { type } = await searchParams;
+  const { type, folder } = await searchParams;
   const docType = type && DOC_TYPE_LABELS[type] ? type : "sales";
 
   const [doc] = await db
@@ -34,5 +34,8 @@ export default async function NewChatPage({
     answersJson: {},
   });
 
-  redirect(`/chat/${doc.id}`);
+  // folder(세션 문서함)는 클라 스토어에서 문서↔문서함 매핑 기록에 쓰인다(데모 한정, DB 미persist).
+  redirect(
+    folder ? `/chat/${doc.id}?folder=${encodeURIComponent(folder)}` : `/chat/${doc.id}`,
+  );
 }

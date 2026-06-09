@@ -280,6 +280,16 @@ async function main() {
   );
   console.log(`  draft version:  ${draftVersions.length > 1 ? "✓" : "✗"}`);
 
+  // KEEP_PENDING: 데모용 — 자동 승인을 건너뛰고 대기 카드를 그대로 남긴다(발표자가
+  // UI 에서 직접 발행). 검증 e2e 가 아니라 데모 준비용 트리거로 쓸 때.
+  if (process.env.KEEP_PENDING) {
+    const pendingCount = runApprovals.filter((a) => !a.decision).length;
+    console.log(
+      `  KEEP_PENDING=1 → 자동 승인 생략. 대기 승인 ${pendingCount}건 유지 (에이전트 페이지에서 확인).`,
+    );
+    process.exit(all5 && runApprovals.length > 0 ? 0 : 1);
+  }
+
   // 승인 → published 검증.
   let publishOk = false;
   const pendingApproval = runApprovals.find((a) => !a.decision);

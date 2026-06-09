@@ -9,8 +9,10 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { KbFolderTabs } from "@/components/kb/KbFolderTabs";
 import { SourceCard } from "@/components/kb/SourceCard";
 import { SourceSheet } from "@/components/kb/SourceSheet";
+import { SourceActions } from "@/components/kb/SourceActions";
 import { UrlInput } from "@/components/kb/UrlInput";
 import { DropZone } from "@/components/kb/DropZone";
 import { KbAutoRefresh } from "@/components/kb/KbAutoRefresh";
@@ -59,22 +61,24 @@ export default async function KbPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="url" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="url">URL ({urlSources.length})</TabsTrigger>
-          <TabsTrigger value="file">파일 ({fileSources.length})</TabsTrigger>
-        </TabsList>
+      <KbFolderTabs>
+        <Tabs defaultValue="url" className="space-y-6">
+          <TabsList variant="chip">
+            <TabsTrigger value="url">URL ({urlSources.length})</TabsTrigger>
+            <TabsTrigger value="file">파일 ({fileSources.length})</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="url" className="space-y-6">
-          <UrlInput />
-          <SourceGrid sources={urlSources} emptyHint="등록된 URL 이 없습니다." />
-        </TabsContent>
+          <TabsContent value="url" className="space-y-6">
+            <UrlInput />
+            <SourceGrid sources={urlSources} emptyHint="등록된 URL 이 없습니다." />
+          </TabsContent>
 
-        <TabsContent value="file" className="space-y-6">
-          <DropZone />
-          <SourceGrid sources={fileSources} emptyHint="업로드된 파일이 없습니다." />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="file" className="space-y-6">
+            <DropZone />
+            <SourceGrid sources={fileSources} emptyHint="업로드된 파일이 없습니다." />
+          </TabsContent>
+        </Tabs>
+      </KbFolderTabs>
 
       <KbAutoRefresh enabled={anyCrawling} />
     </main>
@@ -97,14 +101,29 @@ function SourceGrid({
   }
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {sources.map((s) => (
-        <Sheet key={s.id}>
-          <SheetTrigger className="block w-full text-left">
-            <SourceCard source={s} />
-          </SheetTrigger>
-          <SourceSheet source={s} chunkCount={s.chunkCount} />
-        </Sheet>
-      ))}
+      {sources.map((s) => {
+        const title =
+          s.title ??
+          (s.kind === "url"
+            ? (s.url ?? "(URL)")
+            : (s.fileKey?.split("/").pop() ?? "(파일)"));
+        return (
+          <div key={s.id} className="group relative">
+            <Sheet>
+              <SheetTrigger className="block w-full text-left">
+                <SourceCard source={s} />
+              </SheetTrigger>
+              <SourceSheet source={s} chunkCount={s.chunkCount} />
+            </Sheet>
+            {/* 평소 숨김 → hover/포커스 시 카드 정중앙에 액션 표시 + 어두운 스크림. */}
+            <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-ink-deep/55 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100">
+              <div className="pointer-events-auto rounded-full bg-surface/95 p-1 shadow-elevation-2 ring-1 ring-hairline backdrop-blur-sm">
+                <SourceActions sourceId={s.id} title={title} kind={s.kind} />
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

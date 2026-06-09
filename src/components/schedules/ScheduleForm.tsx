@@ -36,7 +36,7 @@ export function ScheduleForm() {
     reader: "",
     cta: "",
     objection: "",
-    sources: "",
+    keyMessage: "",
     length: "10장",
   });
 
@@ -61,7 +61,7 @@ export function ScheduleForm() {
           throw new Error(body?.error ?? `HTTP ${res.status}`);
         }
         toast.success("스케줄 등록 완료");
-        setForm((f) => ({ ...f, title: "", reader: "", cta: "", objection: "", sources: "" }));
+        setForm((f) => ({ ...f, title: "", reader: "", cta: "", objection: "", keyMessage: "" }));
         router.refresh();
       } catch (err) {
         toast.error(`등록 실패: ${(err as Error).message}`);
@@ -121,8 +121,13 @@ export function ScheduleForm() {
         </label>
       </div>
       <label className="block space-y-1">
-        <span className="text-xs text-muted-foreground">소스 힌트 (KB 매칭)</span>
-        <Input value={form.sources} onChange={set("sources")} placeholder="WAPPLES" required />
+        <span className="text-xs text-muted-foreground">핵심 메시지</span>
+        <Input
+          value={form.keyMessage}
+          onChange={set("keyMessage")}
+          placeholder="WAPPLES 도입으로 웹 보안 위협 90% 차단"
+          required
+        />
       </label>
       <div className="flex justify-end">
         <Button type="submit" disabled={pending}>

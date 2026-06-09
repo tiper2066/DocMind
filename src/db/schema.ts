@@ -135,6 +135,7 @@ export const documents = pgTable("documents", {
     .references(() => workspaces.id, { onDelete: "cascade" }),
   type: text("type").notNull(),
   title: text("title").notNull(),
+  titleManual: boolean("title_manual").notNull().default(false),
   status: text("status").notNull().default("draft"),
   reader: text("reader"),
   cta: text("cta"),

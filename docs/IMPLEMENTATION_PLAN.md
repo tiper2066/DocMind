@@ -173,7 +173,7 @@ audit_logs       (id, workspace_id, actor_id, action, target, ts)
 
 ### 5.3 5질문 대화 인터뷰 (Mode A)
 
-**상태 머신**: `type → reader → cta → objection → sources → length → generate`
+**상태 머신**: `type → reader → cta → objection → keyMessage → length → generate`
 
 - 서버 측 `interview_sessions.answers_json`이 진실 공급원. 각 답변 후 Server Action으로 부분 저장.
 
@@ -373,7 +373,7 @@ src/
 > 기획서 7.1과 동일한 5단계로 무대를 짠다. 시드 데이터는 마이그레이션 + `scripts/seed.ts`로 미리 심어둔다.
 
 1. **사전 시드**: WAPPLES 제품 페이지 URL, 금융권 레퍼런스 PDF 3건, 경쟁사 비교 PPTX 1건. 모두 `status: 'ready'`로 크롤·임베딩 완료 상태.
-2. **Demo A — 5질문→PPT**: 홈에서 "영업 제안서" 카드 → 인터뷰 5문답(독자=임원, CTA=계약, 반론=가격, 소스=WAPPLES, 분량=10) → 30초 내 슬라이드 미리보기 → .pptx 다운로드.
+2. **Demo A — 5질문→PPT**: 홈에서 "영업 제안서" 카드 → 인터뷰 5문답(독자=임원, CTA=계약, 반론=가격, 핵심메시지="WAPPLES로 웹 위협 선제 차단", 분량=10) → 30초 내 슬라이드 미리보기 → .pptx 다운로드.
 3. **Demo B — 자율 루프**: 별도 스크립트로 시드 URL의 `content_hash`를 강제 변경 → Inngest `agent.detect` 즉시 트리거(개발자 모드 "지금 감지" 버튼) → 대시보드 활동 피드에 5단계가 순차 로그 → 우측 승인 카드 등장 → "발행 승인" 클릭 → Slack 알림 발송 → 신버전 발행.
 
 라이브 데모 실패 대비 녹화본은 `/demo/playback` 라우트에서 재생.
@@ -676,7 +676,7 @@ SENTRY_DSN=
 
 **상태머신**
 
-- [x] [src/lib/interview/machine.ts](../src/lib/interview/machine.ts) — `type→reader→cta→objection→sources→length→generate` 7단계 (`STEPS` 상수, `nextStep`/`isLastAnswerable`/`isAnswerable` 헬퍼, `DOC_TYPE_LABELS`·`STEP_LABELS` 매핑)
+- [x] [src/lib/interview/machine.ts](../src/lib/interview/machine.ts) — `type→reader→cta→objection→keyMessage→length→generate` 7단계 (`STEPS` 상수, `nextStep`/`isLastAnswerable`/`isAnswerable` 헬퍼, `DOC_TYPE_LABELS`·`STEP_LABELS` 매핑)
 - [x] [src/lib/interview/store.ts](../src/lib/interview/store.ts) — zustand `interviewStore` 팩토리(`createInterviewStore(init)`). state: `documentId/documentType/currentStep/answers/turns/quickReplies/insight/matches/pending/done`. action: `pushUser/pushAi/applyNext/setPending`. ChatView 가 `useState(() => createInterviewStore(initial))` 패턴으로 React 19 의 `react-hooks/refs` 룰 우회
 
 **API**
@@ -851,7 +851,7 @@ SENTRY_DSN=
 
 **스케줄 (Mode C)** ✅ (단계 4)
 
-- [x] [app/(app)/schedules/page.tsx](<../src/app/(app)/schedules/page.tsx>) — cron + 문서 템플릿(유형/제목/독자/CTA/반론/소스/분량) 등록 폼([ScheduleForm](../src/components/schedules/ScheduleForm.tsx)) + 목록(활성 토글/삭제 [ScheduleActions](../src/components/schedules/ScheduleActions.tsx)). nav 에 "스케줄" 링크 추가
+- [x] [app/(app)/schedules/page.tsx](<../src/app/(app)/schedules/page.tsx>) — cron + 문서 템플릿(유형/제목/독자/CTA/반론/핵심메시지/분량) 등록 폼([ScheduleForm](../src/components/schedules/ScheduleForm.tsx)) + 목록(활성 토글/삭제 [ScheduleActions](../src/components/schedules/ScheduleActions.tsx)). nav 에 "스케줄" 링크 추가
 - [x] API [POST /api/schedules](<../src/app/api/schedules/route.ts>) (cron 검증 + 생성) · [PATCH/DELETE /api/schedules/[id]](<../src/app/api/schedules/[id]/route.ts>) (토글/삭제, 워크스페이스 격리)
 - [x] Inngest [agent.generate.scheduled](../src/inngest/agent.ts) — **매분(`* * * * *`) 틱 + 등록 schedule cron 매칭**(정적 cron 제약 우회 패턴) → `generateDeck`(KB 자동 매칭 포함) → document+version(published) 저장 + 결과 notification(pending) 기록
 - [x] [src/lib/cron.ts](../src/lib/cron.ts) `cronMatches`(의존성 없는 5필드 매처) + [src/lib/schedule.ts](../src/lib/schedule.ts)(공유 템플릿 Zod). cron 매처 단위테스트 11/11
@@ -944,13 +944,13 @@ SENTRY_DSN=
 
 **시드 & 스크립트**
 
-- [ ] `scripts/seed-demo.ts` — WAPPLES URL + 금융 PDF 3건 + 경쟁사 PPTX 1건
-- [ ] `scripts/force-change.ts` — 시드 URL `content_hash` 강제 변경 (Demo B 트리거)
+- [x] [`scripts/seed-demo.ts`](../scripts/seed-demo.ts) — WAPPLES URL + 파일 소스 시드(`pnpm seed:demo`). 멱등·부분실패 허용. **파일 URL(PDF/PPTX/DOCX/XLSX)은 `DEMO_FILES` 배열을 데모팀이 실제 자료 공개 URL 로 교체**(기본은 PDF 샘플 1건). Demo B 소스는 force-change 가 따로 심으므로 중복 안 함.
+- [x] [`scripts/force-change.ts`](../scripts/force-change.ts) — 시드 URL `content_hash` 강제 변경 (Demo B 트리거). `pnpm verify:agent` 로 배선, 자체 `[demo]` 소스·문서·청크 시드까지 포함(오프라인·결정론적).
 - [ ] 사전 생성된 인터뷰 응답 캐시 (LLM 장애 fallback)
 
 **리허설 환경**
 
-- [ ] [app/demo/playback/page.tsx](app/demo/playback/page.tsx) — 백업 녹화 영상 재생
+- [x] [src/app/demo/playback/page.tsx](../src/app/demo/playback/page.tsx) — 백업 녹화 영상 재생(`/demo/playback`). `public/demo/demo-a.mp4`·`demo-b.mp4` 있으면 자동 플레이어, 없으면 배치 안내. **mp4 파일은 리허설 녹화 후 배치 필요**.
 - [ ] 발표 PC에서 Chrome 단독 프로필 생성 (확장 프로그램 X)
 - [ ] 데모 환경변수 분리(`SLACK_DEFAULT_CHANNEL_ID=#docmind-demo` 고정)
 
@@ -974,12 +974,26 @@ SENTRY_DSN=
 **최종 점검**
 
 - [ ] Sentry 알람 룰 (P0: `/api/interview/*`, `/api/generate/*` 5xx)
-- [ ] Supabase 콜드 쿼리 워밍 (발표 10분 전 자동 ping)
+- [x] 콜드 쿼리 워밍 ([`scripts/warmup.ts`](../scripts/warmup.ts), `pnpm warmup`) — DB·Anthropic·Voyage·Inngest 4종 핑, 발표 ~10분 전 1회 실행
+- [ ] **WCAG AA 색 대비 정량 감사**(Lighthouse/axe) — Phase 8 에서 이월된 접근성 검증
 - [ ] Vercel deployment alias 고정 (`docmind-demo.vercel.app`)
 
 ---
 
 ## 16. 결정 로그
+
+- **데모 UI/UX 폴리시 묶음** (2026-06-09): 데모 직전 화면 다듬기 일괄.
+  - **문서 상세 버전 타임라인** — (a) PPTX `.pptx` 링크가 생 `<a>` 라 클릭 시 다운로드 API 의 JSON(`{url}`)이 노출되던 버그 → [PptxDownloadLink](../src/components/docs/PptxDownloadLink.tsx)(fetch → 서명 URL 이동, 미리보기 다운로드 버튼과 동일). (b) "미리보기"(검정=`dark` variant)·"다운로드"(primary) **버튼화**, 간격 축소. (c) "최신과 비교" 텍스트 링크 제거 → **카드 표면 전체 클릭으로 비교**: 중첩 인터랙티브 회피 위해 `absolute inset-0` 오버레이 `<Link>`(`pointer-events-none` 텍스트 + `z-10` 버튼 분리), 최신 카드는 비교 대상 없어 비활성([VersionCard](../src/components/docs/VersionCard.tsx)). (d) 최신 버전 카드 검정 테두리(`border-ink-deep`).
+  - **문서함 카드 뱃지** — [DocsFolderView](../src/components/docs/DocsFolderView.tsx) "완료" 우측에 **New**(생성 24h 이내·primary)·**Update**(갱신 24h 이내 + 버전>1·검정 `ink-deep`). 기준은 [docs/page](<../src/app/(app)/docs/page.tsx>)에서 SQL `now() - interval '24 hours'` 로 계산(서버 렌더에서 `Date.now()` 는 React 순수성 린트 위반이라 DB now() 사용).
+  - **에이전트 카드** — 발행 뱃지 좌측 **생성일자**(서버 `toLocaleDateString` 포맷, 클라/SSR 시간차 회피). `documentVersions` 에 `publishedAt` 컬럼 없어 `createdAt` 표시. [LoopDiagram](../src/components/agent/LoopDiagram.tsx) 노드 원에 **불투명 백드롭 원**(`text-canvas`) 추가 — 반투명 상태색(/60·/25·/40)을 통해 연결선이 비치던 문제 해소.
+  - **인터뷰** — [ProgressTrack](../src/components/chat/ProgressTrack.tsx) 단계 원형의 `disabled` 시 `opacity-60` 제거(`cursor-default` 로 대체) → 전송 중 원형이 반투명해 라인과 겹치던 문제 해소. 입력 placeholder·전송 버튼 라벨 "직접 입력", 생성 버튼 "문서 생성/문서 생성 중...". **되돌아가기 버그 수정**: 이미 답한 단계로 돌아가면 LLM 이 currentStep 무시하고 "다음 질문"을 생성 → (a) [store](../src/lib/interview/store.ts) `questionByStep` 에 보관된 원래 질문 우선 사용(placeholder 는 미보관해 폴백), (b) [interview 프롬프트](../src/lib/prompts/interview.ts)에 "currentStep 질문만, 이미 답 있어도 그 단계 재질문" 규칙. 인사이트 카드 제목 "KB 매칭 인사이트"→"매칭 인사이트", 입력 중 점 애니메이션 진폭 확대(`dot-bounce`).
+  - **홈** — "맞춤 문서 만들기" 카드를 **풀폭 입력 카드**(타이틀 "어떤 문서를 만들까요?" + textarea + ArrowUp 전송 아이콘)로 교체. 입력만 가능, 전송 기능 없음(프로덕션 예정 툴팁) ([page](<../src/app/(app)/page.tsx>)).
+  - **KB 카드** — 액션(수정/삭제) 평소 숨김 → **hover/포커스 시 카드 중앙에 표시 + 어두운 스크림**(`bg-ink-deep/55`), 우상단 상태 뱃지와 겹침 해소. 오버레이 `pointer-events-none` + 버튼만 `pointer-events-auto` 라 버튼 외 영역은 상세 시트 열림([kb/page](<../src/app/(app)/kb/page.tsx>)).
+  - **데모 운영** — `pnpm demo:pending`(`KEEP_PENDING=1` [force-change](../scripts/force-change.ts)): 5단계 후 자동 승인을 건너뛰고 대기 카드를 남김(실수로 발행한 카드 대신 대기 카드 재생성용). 전제: "문서 발행" 수동.
+
+- **KB 소스 "수정(내용 교체)" → 실제 변경 감지로 대기 문서 생성** (2026-06-09): 데모 B 를 force-change 강제 해시 대신 *실제 자료 갱신* 흐름으로 시연 가능하게 함. (1) [PATCH /api/kb/sources/[id]](../src/app/api/kb/sources/[id]/route.ts) — 파일 소스는 새 파일로 `fileKey` 교체(제목·**content_hash 유지** — detect 가 라이브 새 내용 vs 저장된 옛 해시를 비교해야 diff 를 잡으므로 해시를 미리 갱신하지 않음), URL 소스는 외부 변경 재감지. 교체 후 `agent/detect.requested` 발화. (2) [detect scan](../src/inngest/agent.ts) — 기존 `kind="url"` 한정에서, **명시 트리거(sourceId 지정) 시 종류 무관(파일 포함)**, cron 자동 스캔은 URL 만으로 변경(파일 30분 재크롤 낭비 방지). (3) [SourceActions](../src/components/kb/SourceActions.tsx) — 파일=연필(파일 재업로드 sign→PUT→PATCH), URL=새로고침(재감지) 버튼. **한계**: detect 는 content_hash 만 갱신하고 소스 청크/요약은 재생성하지 않음(기존 루프 동작과 동일 — act 단계도 base slidesJson 복사). 즉 교체 후 KB 청크는 옛 내용 유지. 5% 미만 변경은 조용히 해시만 갱신(대기 미생성). 전제: "문서 발행" 수동. lint·build PASS.
+
+- **인터뷰 4단계 `sources` → `keyMessage`(핵심 메시지) 교체** (2026-06-09): 기존 `sources`(참고 자료) 답변은 생성에서 KB 필터로 쓰이지 않고([kbMatchByVector](../src/lib/interview/service.ts)가 워크스페이스 `ready` 소스 전체를 벡터 매칭) 프롬프트 텍스트 힌트로만 들어가 정보 가치가 낮았다. KB 는 어차피 자동 참조되므로 이 단계를 **"이 문서를 관통하는 한 줄 핵심 주장"**으로 교체. 생성 전반에 실질 반영: [outline](../src/lib/prompts/outline.ts)·[slide-fill](../src/lib/prompts/slide-fill.ts) 시스템 프롬프트에 "keyMessage = 덱의 축, 표지 헤드라인은 keyMessage 압축" 지시 추가, [generate.ts](../src/lib/ppt/generate.ts) `<answers>` 블록·headlineQuery 에 주입. 영향 파일: [machine.ts](../src/lib/interview/machine.ts)(STEPS·STEP_LABELS), [interview.ts](../src/lib/prompts/interview.ts), [service.ts](../src/lib/interview/service.ts)(`STEPS_NEEDING_FRESH_KB` 비움 — 소스 고르기 단계 소멸), finalize·generate 라우트, 스케줄 경로([schedule.ts](../src/lib/schedule.ts)·[agent.ts](../src/inngest/agent.ts)·[ScheduleForm](../src/components/schedules/ScheduleForm.tsx)). DB 컬럼 변경 없음(answersJson JSON 키만 변경). lint·build PASS.
 
 - **Supabase (Postgres + Storage + pgvector)** vs Neon + Cloudflare R2: 콜드스타트 없음 + 단일 콘솔 + pgvector 기본 활성 → Supabase. Auth.js 세션을 그대로 쓰므로 Supabase Auth는 미사용(서버에서 service role로 signed URL 발급).
 - **단일 DB(pgvector)** vs Pinecone/Weaviate: 데모 규모와 단일 배포 우선 → pgvector.
@@ -992,5 +1006,15 @@ SENTRY_DSN=
 - **Auth.js v5 split config + JWT session strategy** (2026-05-28): Edge runtime (middleware) 에서 DB 접근 불가 → [src/auth.config.ts](../src/auth.config.ts) (providers/callbacks, Edge-safe) 와 [src/auth.ts](../src/auth.ts) (+DrizzleAdapter, Node) 로 분리. Session strategy 는 `jwt` 로 — middleware 에서 추가 DB 호출 없이 인증 판정 가능. database strategy 가 필요해지면 (예: 즉시 logout 반영) 전환.
 - **Sentry `sendDefaultPii: false` 강제** (2026-05-28): `@sentry/wizard` 가 기본값 `true` 로 init 코드 생성하지만 plan §10 비기능 ("PII 는 로그에 남기지 않음") 과 정면 충돌. [sentry.server.config.ts](../sentry.server.config.ts), [sentry.edge.config.ts](../sentry.edge.config.ts), [src/instrumentation-client.ts](../src/instrumentation-client.ts) 3 파일 모두 `false` 로 변경. 향후 특정 컨텍스트만 화이트리스트하려면 `beforeSend` 에서 명시.
 - **Sentry DSN 하드코딩 유지** (2026-05-28): wizard 가 3 init 파일에 DSN 을 직접 박는데 DSN 은 공개해도 무방 (Sentry 표준 권장) → 환경변수화하지 않고 하드코딩 유지. `SENTRY_DSN` env 는 unused — 향후 환경별 DSN 분기 필요 시 (`process.env.NEXT_PUBLIC_SENTRY_DSN`) 코드 갈아끼움. env 파일 주석으로 명시.
+- **데모 UI 폴리시 2차 (탭 비주얼·설정 레이아웃·KB 소스 삭제·버튼 통일)** (2026-06-08): FolderTabs 도입(아래 항목) 이후 같은 날 진행한 데모 직전 UI 일괄 작업.
+  - **(A) folder 탭 비주얼** — [tabs.tsx](../src/components/ui/tabs.tsx) `folder` variant: 하단 모서리 직각(`rounded-t-md rounded-b-none`), **비활성 탭 흰 배경(`bg-background`)**, **하단 full-width 라인 = 활성 채움색(`foreground`)**. 라인을 탭 위 레이어로 올려(`border-b` → 절대배치 `::after` `h-px bg-foreground`) 비활성 탭 하단이 라인색으로 덮이게 하고, 활성 탭은 `z-10` 으로 라인 위로 올라와 본문과 연결된 폴더 모양 유지. 활성 탭 hover 시 글자색 유지(`data-active:hover:text-background`, 안 하면 hover 의 `text-foreground` 가 어두운 배경에 묻힘).
+  - **(B) 문서함 "새 문서함 만들기"** — [DocsFolderView](../src/components/docs/DocsFolderView.tsx) 헤더 우측에 버튼+제목 블록을 클라 컴포넌트로 흡수(상태 공유). 신규 [NewFolderButton](../src/components/docs/NewFolderButton.tsx)(Dialog+입력) 가 세션 한정 `addFolder` 호출 → `onCreated` 로 `setActiveFolder` 해 **생성 즉시 새 탭으로 전환**. 빈 폴더는 기존 빈 상태 안내 표시. (소스/문서↔문서함 영속 매핑은 프로덕션 보류)
+  - **(C) 한글 IME Enter 중복 생성 버그** — 조합 확정 Enter 가 제출 핸들러를 동시에 발동해 마지막 글자("서")로 폴더가 1개 더 생기던 문제. [NewFolderButton](../src/components/docs/NewFolderButton.tsx)·[FolderPickerDialog](../src/components/home/FolderPickerDialog.tsx) 양쪽 `onKeyDown` 에 `!e.nativeEvent.isComposing` 가드 추가([알려진 함정](../CLAUDE.md) 등재).
+  - **(D) 타이틀↔컨텐츠 여백 통일 32px(`mb-8`)** — 지식베이스 기준으로 문서함·에이전트·스케줄·설정 헤더 여백을 맞춤. 홈은 heading-2 히어로라 `mb-12` 유지.
+  - **(E) 설정 페이지 06 목업 레이아웃** — `lg:grid-cols-3` 2열: 좌(2/3) [SettingsForm](../src/components/settings/SettingsForm.tsx) + 우(1/3) [TemplateCard](../src/components/settings/TemplateCard.tsx)/[ModeCard](../src/components/settings/ModeCard.tsx). SettingsForm 컨트롤을 목업대로 변경(자동실행=토글스위치, 발행=수동/자동 세그먼트, **Email 알림 플레이스홀더 입력란**=저장 안 함, 저장 버튼 하단 중앙). API·스키마는 그대로(`autoRun/publish/notifyChannel`). 좌측 카드 `h-full`+저장 `mt-auto` 로 바닥을 우측 모드 카드 하단과 정렬. **테마 토글을 헤더에서 제거**([TopNav](../src/components/nav/TopNav.tsx) 데스크탑·모바일) → 우측 하단 "모드" 카드 Light/Dark 세그먼트(ModeCard, `next-themes`)로 이동. 미사용이 된 `ThemeToggle.tsx` 삭제. 문서 템플릿 등록·Email 알림은 **데모 플레이스홀더**(업로드 API·스토리지 없음, 토스트만). 멤버 목록·연결 뱃지 UI 제거.
+  - **(F) 에이전트 우측 카드 정렬** — [agent/page.tsx](<../src/app/(app)/agent/page.tsx>) `<aside>` 에 `md:mt-15.5`(≈62px) — 탭 스트립 높이(≈38px)+탭↔콘텐츠 간격(gap-2 8px+mt-4 16px)만큼 내려 우측 통계 카드 상단을 좌측 첫 문서 카드 상단과 정렬.
+  - **(G) KB 소스 삭제 + "관리" 버튼** — URL 입력 흰 배경(`bg-canvas`), "URL 등록" 우측 표시전용 "관리" 버튼([UrlInput](../src/components/kb/UrlInput.tsx)). **모든 URL·파일 카드에 실제 삭제** — 신규 [DELETE /api/kb/sources/[id]](<../src/app/api/kb/sources/[id]/route.ts>)(워크스페이스 격리, `source_chunks`·`document_sources` cascade·`change_events` set null·파일은 Storage best-effort 정리·`audit_logs source.delete`), 헬퍼 [deleteSourceObjects](../src/lib/storage.ts), [SourceActions](../src/components/kb/SourceActions.tsx)(휴지통+확인 Dialog). [kb/page.tsx](<../src/app/(app)/kb/page.tsx>) 그리드를 `relative` 래퍼로 감싸 삭제 버튼을 SheetTrigger **형제로 절대배치**(button 중첩 회피), [SourceCard](../src/components/kb/SourceCard.tsx) 헤더에 `pr-9` 로 상태칩 겹침 방지.
+  - **(H) 토글 버튼 스타일 통일(chip)** — 문서함 필터(Badge)와 KB URL/파일(Tabs)이 다른 프리미티브라 모양이 달랐음. [tabs.tsx](../src/components/ui/tabs.tsx) 에 공용 `chip` variant 추가(미선택=흰 배경+hairline 보더, 선택=`primary` 채움, pill 형태, 다크 override 포함) → KB `<TabsList variant="chip">` 적용. 문서함 미선택 칩은 `bg-canvas`(흰색) 추가(선택 칩 primary 는 조건부라 영향 없음). 선택색은 primary 보라로 합의.
+- **문서함 탭 단일화(FolderTabs) & KB 문서함 탭** (2026-06-08): 문서함·에이전트·KB 세 화면이 각각 `<Tabs>`+`folders.map` 을 중복 작성하던 것을 공용 [FolderTabs](../src/components/folders/FolderTabs.tsx) 로 추출. (1) [tabs.tsx](../src/components/ui/tabs.tsx) 에 `folder` variant 추가 — **활성=`bg-foreground`/`text-background`(짙은 채움·반전 글자, 라이트=흑배경·흰글자, 다크 자동 반전), 비활성=`border-hairline` 보더, 리스트 하단 full-width hairline(`border-b`)**. pill 의 `bg-ink-deep`/`text-on-dark` 은 다크에서 흰배경+흰글자로 깨지므로(ink-deep 가 다크에서 #fff) folder 는 자동 반전하는 `foreground/background` 토큰 사용. (2) [DocsFolderView](../src/components/docs/DocsFolderView.tsx)(controlled)·[AgentDocs](../src/components/agent/AgentDocs.tsx)(uncontrolled, 외곽 탭만 — PendingCard 내부 feed/loop 탭은 기본 Tabs 유지) 가 FolderTabs 채택. (3) **KB 문서함 탭은 표시 전용** — 소스↔문서함 매핑이 후순위(데이터 분리 안 함)라 기존 소스는 전부 시드 WAPPLES(`DEFAULT_FOLDER_ID`)에 귀속, 그 외 문서함은 빈 탭. [KbFolderTabs](../src/components/kb/KbFolderTabs.tsx) 클라 래퍼가 활성 문서함을 보고 children(서버 렌더된 URL/파일 하위 탭)을 default 문서함에서만 노출, 나머지는 빈 안내. lint·build PASS.
 - **데모 직전 UI 폴리시 & 문서 제목 정합** (2026-06-02): (1) **UI 브랜드명 "Mind5"** — 화면(탭/로그인/네비)·발행 이메일만 교체. 내부 코드·식별자(Inngest 앱 id `docmind`, Slack `#docmind-demo`, 패키지명)와 docs 는 "DocMind" 유지. (2) **미완성 초안 문서함 숨김** — 문서함 목록을 `status != 'draft'` 로 필터해 최종 생성 전 초안을 비표시([docs/page.tsx](<../src/app/(app)/docs/page.tsx>)). "생성 버튼 전 DB 미생성"(지연 생성)은 `interview_sessions` 가 `documentId` FK 필수 + `/chat/[documentId]` 라우팅이라 스키마 마이그레이션+라우팅 변경 필요 → **프로덕션 보류**. (3) **deck 제목 단일화** — [generate.ts](../src/lib/ppt/generate.ts) 가 `meta.title` 을 표지(첫 슬라이드) 제목으로 통일 → 미리보기 헤더·`pres.title`·문서함 카드/상세가 모두 동일. 생성 시 `documents.title` 도 표지 제목으로 동기화하되 **Mode A 실경로 [finalize](../src/app/api/interview/finalize/route.ts) 와 재생성 경로 [generate](<../src/app/api/generate/route.ts>) 양쪽 모두**에 적용(한쪽만 넣어 카드 제목이 안 바뀌던 버그를 수정). (4) `.pptx` 다운로드 파일명 = `"<문서 제목> v<버전>.pptx"` — Supabase signed URL `download` 옵션([storage.ts](../src/lib/storage.ts)). (5) 인터뷰 단계 표시를 번호 원+연결선 위저드로([ProgressTrack.tsx](../src/components/chat/ProgressTrack.tsx), rewind 클릭 유지), 버튼 hover 피드백(배경 흐림+`shadow-elevation-2`, ghost/link 제외), 홈 "사용자 유형 추가" 카드(프로덕션 예정 UI·회색 배경), 상단 "홈" 메뉴 제거(브랜드 로고 클릭으로 대체).
 - **문서 삭제(hard delete) 채택** (2026-06-01): 문서함에서 초안·완료 문서를 영구 삭제. soft-delete(보관/휴지통) 대신 **hard delete** 선택 — 데모 규모 + 스키마가 이미 안전하게 설계됨(`document_versions`/`document_sources`/`interview_sessions` 는 FK `cascade`, `approvals.documentId` 는 `set null`). [approve 플로우](../src/app/api/agent/approve/route.ts)는 삭제된 문서에 graceful no-op(버전 update 0건·null documentId 스킵)이라 워크플로우 무손상. **가드 1개**: 미결(pending) 승인이 걸린 문서는 `409 pending_approval` 로 삭제 차단(승인 큐 정합성). `.pptx` 스토리지는 Postgres cascade 대상이 아니라 [storage.ts](../src/lib/storage.ts) `deletePptxObjects()` 로 best-effort 정리. 구현: [api/documents/[id]/route.ts](<../src/app/api/documents/[id]/route.ts>)(DELETE·RBAC·audit_logs `document.delete`), [DocActions.tsx](../src/components/docs/DocActions.tsx)(확인 Dialog), 문서함 목록·상세에 노출.

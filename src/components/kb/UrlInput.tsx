@@ -45,9 +45,14 @@ export function UrlInput() {
         placeholder="https://pentasecurity.com/products/wapples"
         disabled={pending}
         autoComplete="off"
+        className="bg-canvas"
       />
       <Button type="submit" disabled={pending || url.trim().length === 0}>
         {pending ? "등록 중..." : "URL 등록"}
+      </Button>
+      {/* 표시 전용 — 동작 없음(데모) */}
+      <Button type="button" variant="outline">
+        관리
       </Button>
     </form>
   );

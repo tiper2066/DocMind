@@ -15,7 +15,7 @@ export function SourceCard({ source }: { source: Source }) {
 
   return (
     <Card className="flex h-full w-full flex-col gap-3 p-4 text-left transition duration-200 hover:-translate-y-0.5 hover:bg-surface hover:shadow-elevation-2">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-3 pr-9">
         <div className="flex min-w-0 items-center gap-2">
           <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
           <span className="truncate text-sm font-medium">{title}</span>

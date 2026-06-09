@@ -18,10 +18,10 @@ export function NavLink({
     <Link
       href={href}
       className={cn(
-        "rounded-md px-3 py-1.5 text-sm transition-colors",
+        "rounded-md px-3 py-1.5 text-body-md transition-colors",
         isActive
           ? "bg-surface font-medium text-brand"
-          : "text-steel hover:bg-surface hover:text-ink",
+          : "text-ink hover:text-brand",
       )}
     >
       {children}

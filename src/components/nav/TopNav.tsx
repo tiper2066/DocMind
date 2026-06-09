@@ -1,9 +1,9 @@
 import Link from "next/link";
+import Image from "next/image";
 import { auth } from "@/auth";
 import { Button } from "@/components/ui/button";
 import { signOutAction } from "@/lib/auth-actions";
 import { NavLink } from "./NavLink";
-import { ThemeToggle } from "./ThemeToggle";
 import { MobileNav } from "./MobileNav";
 import { NAV_ITEMS } from "./items";
 
@@ -11,11 +11,26 @@ export async function TopNav() {
   const session = await auth();
 
   return (
-    <header className="border-b border-hairline bg-canvas">
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-6 px-6">
+    <header className="border-b border-hairline bg-page">
+      <div className="mx-auto flex h-21.25 max-w-6xl items-center justify-between gap-6 px-6">
         <div className="flex items-center gap-6">
-          <Link href="/" className="font-heading text-heading-5 text-brand">
-            Mind5
+          <Link href="/" className="flex items-center" aria-label="Mind5 홈">
+            <Image
+              src="/Mind5.svg"
+              alt="Mind5"
+              width={96}
+              height={27}
+              priority
+              className="block dark:hidden"
+            />
+            <Image
+              src="/Mind5-dark.svg"
+              alt="Mind5"
+              width={96}
+              height={27}
+              priority
+              className="hidden dark:block"
+            />
           </Link>
           <nav className="hidden items-center gap-1 md:flex">
             {NAV_ITEMS.map((it) => (
@@ -30,7 +45,6 @@ export async function TopNav() {
         {/* 데스크탑 우측 */}
         <div className="hidden items-center gap-3 md:flex">
           <span className="text-sm text-steel">{session?.user?.email}</span>
-          <ThemeToggle />
           <form action={signOutAction}>
             <Button type="submit" variant="ghost" size="sm">
               로그아웃
@@ -38,9 +52,8 @@ export async function TopNav() {
           </form>
         </div>
 
-        {/* 모바일 우측 — 테마 토글 + 햄버거(→ Sheet 드로어) */}
+        {/* 모바일 우측 — 햄버거(→ Sheet 드로어). 테마 전환은 설정 페이지 "모드" 카드로 이동 */}
         <div className="flex items-center gap-1 md:hidden">
-          <ThemeToggle />
           <MobileNav email={session?.user?.email} />
         </div>
       </div>

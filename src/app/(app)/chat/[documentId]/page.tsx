@@ -11,19 +11,23 @@ import {
   type Step,
 } from "@/lib/interview/machine";
 import { ChatView } from "@/components/chat/ChatView";
+import { FolderAssigner } from "@/components/chat/FolderAssigner";
 import type { InitialChatState } from "@/lib/interview/store";
 
 export const dynamic = "force-dynamic";
 
 export default async function ChatPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ documentId: string }>;
+  searchParams: Promise<{ folder?: string }>;
 }) {
   const ctx = await getWorkspaceContext();
   if (!ctx) redirect("/login");
 
   const { documentId } = await params;
+  const { folder } = await searchParams;
 
   const [doc] = await db
     .select()
@@ -76,5 +80,10 @@ export default async function ChatPage({
     initialQuestion,
   };
 
-  return <ChatView initial={initial} />;
+  return (
+    <>
+      {folder && <FolderAssigner documentId={doc.id} folder={folder} />}
+      <ChatView initial={initial} />
+    </>
+  );
 }

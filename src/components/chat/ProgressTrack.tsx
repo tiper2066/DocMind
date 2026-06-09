@@ -83,7 +83,7 @@ export function ProgressTrack({
                 disabled={disabled}
                 aria-label={`${STEP_LABELS[step]} 단계로 이동`}
                 className={`group flex flex-col items-center ${
-                  disabled ? "opacity-60" : "cursor-pointer"
+                  disabled ? "cursor-default" : "cursor-pointer"
                 }`}
               >
                 {inner}

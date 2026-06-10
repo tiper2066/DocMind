@@ -207,14 +207,16 @@ export default async function AgentPage({
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-8">
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8 flex items-center justify-between gap-6">
         <div>
           <h1 className="font-heading text-heading-3 text-ink">에이전트</h1>
           <p className="mt-1 text-body-sm text-steel">
             소스 변경을 감지하고 5단계(감지→인식→판단→행동→학습)로 문서를 갱신합니다.
           </p>
         </div>
-        <DetectButton agentId={monitorAgentId} />
+        <div className="shrink-0">
+          <DetectButton agentId={monitorAgentId} />
+        </div>
       </div>
 
       {decidedHighlight && (

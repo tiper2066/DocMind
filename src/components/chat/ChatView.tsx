@@ -204,7 +204,7 @@ export function ChatView({ initial }: { initial: InitialChatState }) {
   };
 
   return (
-    <main className="mx-auto grid max-w-6xl gap-x-6 gap-y-4 px-6 py-8 lg:grid-cols-[1fr_320px]">
+    <main className="mx-auto flex max-w-6xl flex-col gap-x-6 gap-y-4 px-6 py-8 lg:grid lg:grid-cols-[1fr_320px]">
       <header className="flex flex-col gap-3 lg:col-start-1 lg:row-start-1">
         <h1 className="font-heading text-heading-4 text-ink">{typeLabel}</h1>
         <ProgressTrack

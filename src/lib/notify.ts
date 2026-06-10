@@ -12,7 +12,9 @@ import {
 import { sendPublishEmail, type EmailSendResult } from "@/lib/email";
 
 export function appBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  // `||`: 빈 문자열로 설정된 env 도 fallback 처리 (Slack 버튼 URL 은 절대 경로 필수)
+  const base = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  return base.replace(/\/+$/, "");
 }
 
 export type DispatchInput = {

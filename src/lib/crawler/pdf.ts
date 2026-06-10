@@ -1,26 +1,25 @@
-import { PDFParse } from "pdf-parse";
+import { extractText, getDocumentProxy, getMeta } from "unpdf";
 import type { ExtractResult } from "./types";
 
+// pdf-parse(→pdfjs-dist v5) 는 브라우저 전역 DOMMatrix 를 참조해 Vercel 서버리스에서
+// ReferenceError 로 죽었다(CLAUDE.md §8). unpdf 는 Node/serverless 호환 pdfjs 빌드를
+// 내장해 DOM 전역 없이 동작한다.
 export async function extractPdf(buf: ArrayBuffer): Promise<ExtractResult> {
-  const parser = new PDFParse({ data: new Uint8Array(buf) });
-  try {
-    const info = await parser.getInfo().catch(() => null);
-    const result = await parser.getText();
-    const title = pickTitle(info);
-    return {
-      title,
-      text: normalize(result.text),
-      meta: { pages: result.total },
-    };
-  } finally {
-    await parser.destroy().catch(() => {});
-  }
+  const pdf = await getDocumentProxy(new Uint8Array(buf));
+  // mergePages: true → text 는 단일 string.
+  const { totalPages, text } = await extractText(pdf, { mergePages: true });
+  const meta = await getMeta(pdf).catch(() => null);
+  return {
+    title: pickTitle(meta),
+    text: normalize(text),
+    meta: { pages: totalPages },
+  };
 }
 
-function pickTitle(info: unknown): string | undefined {
-  if (!info || typeof info !== "object") return undefined;
-  const i = info as { info?: { Title?: unknown }; metadata?: { Title?: unknown } };
-  const t = i.info?.Title ?? i.metadata?.Title;
+function pickTitle(meta: unknown): string | undefined {
+  if (!meta || typeof meta !== "object") return undefined;
+  const m = meta as { info?: { Title?: unknown } };
+  const t = m.info?.Title;
   if (typeof t === "string" && t.trim().length > 0) return t.trim();
   return undefined;
 }

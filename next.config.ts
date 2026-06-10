@@ -1,9 +1,7 @@
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  serverExternalPackages: ["pdf-parse"],
-};
+const nextConfig: NextConfig = {};
 
 export default withSentryConfig(nextConfig, {
   // For all available options, see:

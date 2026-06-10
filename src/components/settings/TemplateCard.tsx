@@ -17,11 +17,13 @@ export function TemplateCard() {
         <br />
         file.json만 적용 가능합니다.
       </p>
-      <button
-        type="button"
+      <div
         onClick={notify}
+        role="button"
+        tabIndex={0}
         aria-label="템플릿 업로드"
-        className="mt-4 min-h-40 flex-1 rounded-lg border border-dashed border-hairline-strong bg-muted transition-colors hover:bg-accent"
+        style={{ backgroundImage: "url('/ppt_template_bg.png')" }}
+        className="mt-4 min-h-40 flex-1 cursor-pointer rounded-lg border border-dashed border-hairline-strong bg-muted bg-cover bg-center bg-no-repeat transition-opacity hover:opacity-90"
       />
       <div className="mt-4 flex justify-center">
         <Button onClick={notify} className="px-8">

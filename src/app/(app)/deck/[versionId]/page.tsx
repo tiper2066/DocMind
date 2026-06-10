@@ -39,7 +39,7 @@ export default async function DeckPage({
   const deck = DeckSchema.parse(row.v.slidesJson);
 
   return (
-    <main className="mx-auto max-w-7xl px-6 py-6">
+    <main className="mx-auto max-w-6xl px-6 py-6">
       <DeckViewer deck={deck} versionId={versionId} />
     </main>
   );

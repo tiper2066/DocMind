@@ -6,6 +6,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   createInterviewStore,
   type InitialChatState,
 } from "@/lib/interview/store";
@@ -19,12 +26,35 @@ import { QuickReplies } from "./QuickReplies";
 import { ProgressTrack } from "./ProgressTrack";
 import { InsightBox } from "./InsightBox";
 
+const LENGTH_OPTIONS = [
+  "10 ~ 12장 (표준)",
+  "8 ~ 9장 (간결)",
+  "13 ~ 15장 (상세)",
+  "16장 이상 (풀버전)",
+];
+const LENGTH_ITEMS: Record<string, string> = Object.fromEntries(
+  LENGTH_OPTIONS.map((o) => [o, o]),
+);
+
+const SECURITY_OPTIONS: { value: string; label: string }[] = [
+  { value: "1", label: "Level 1 - Secret Permission Required" },
+  { value: "2", label: "Level 2 - Confidential Internal Only" },
+  { value: "3", label: "Level 3 - Confidential Subject to NDA" },
+  { value: "4", label: "Level 4 - Confidential Subject to EULA" },
+  { value: "5", label: "Level 5 - Public" },
+];
+const SECURITY_ITEMS: Record<string, string> = Object.fromEntries(
+  SECURITY_OPTIONS.map((o) => [o.value, o.label]),
+);
+
 export function ChatView({ initial }: { initial: InitialChatState }) {
   const router = useRouter();
   const [useStore] = useState(() => createInterviewStore(initial));
   const state = useStore();
 
   const [input, setInput] = useState("");
+  const [lengthChoice, setLengthChoice] = useState("");
+  const [securityLevel, setSecurityLevel] = useState<1 | 2 | 3 | 4 | 5>(1);
 
   const typeLabel = useMemo(
     () => DOC_TYPE_LABELS[state.documentType] ?? state.documentType,
@@ -150,7 +180,7 @@ export function ChatView({ initial }: { initial: InitialChatState }) {
       const res = await fetch("/api/interview/finalize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ documentId: state.documentId }),
+        body: JSON.stringify({ documentId: state.documentId, securityLevel }),
       });
       const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
       if (!res.ok) {
@@ -205,11 +235,64 @@ export function ChatView({ initial }: { initial: InitialChatState }) {
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            <QuickReplies
-              options={state.quickReplies}
-              onPick={submit}
-              disabled={state.pending}
-            />
+            {state.currentStep === "length" ? (
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="min-w-50 flex-1 space-y-1">
+                  <span className="block text-xs text-muted-foreground">
+                    분량
+                  </span>
+                  <Select
+                    items={LENGTH_ITEMS}
+                    value={lengthChoice || null}
+                    onValueChange={(v: string | null) => {
+                      const val = v ?? "";
+                      setLengthChoice(val);
+                      setInput(val);
+                    }}
+                  >
+                    <SelectTrigger aria-label="분량 선택">
+                      <SelectValue placeholder="분량 선택" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LENGTH_OPTIONS.map((o) => (
+                        <SelectItem key={o} value={o}>
+                          {o}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="min-w-50 flex-1 space-y-1">
+                  <span className="block text-xs text-muted-foreground">
+                    보안 레벨
+                  </span>
+                  <Select
+                    items={SECURITY_ITEMS}
+                    value={String(securityLevel)}
+                    onValueChange={(v: string | null) =>
+                      setSecurityLevel((Number(v ?? "1") || 1) as 1 | 2 | 3 | 4 | 5)
+                    }
+                  >
+                    <SelectTrigger aria-label="보안 레벨 선택">
+                      <SelectValue placeholder="보안 레벨 선택" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SECURITY_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>
+                          {o.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            ) : (
+              <QuickReplies
+                options={state.quickReplies}
+                onPick={submit}
+                disabled={state.pending}
+              />
+            )}
             <form
               onSubmit={(e) => {
                 e.preventDefault();

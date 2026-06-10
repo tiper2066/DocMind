@@ -17,6 +17,8 @@
     },
     "ink": "#000000",
     "ink2": "#404040",
+    "title": "#0060A9",
+    "_titleNote": "슬라이드 제목(role:'title') 텍스트 색. accent.penta 와 같은 값이지만 '제목' 의미로 분리 — 로고색 바뀌어도 제목색은 독립.",
     "text": {
       "secondary": "#7F7F7F",
       "tertiary": "#999B9E",
@@ -50,6 +52,7 @@
     "h3": 28,
     "h4": 22,
     "body": 18,
+    "bodyLg": 24,
     "small": 14,
     "micro": 10.5,
     "watermark.section": 240,
@@ -99,7 +102,13 @@
   },
   "footerMaster": {
     "body": {
-      "bar": { "x": 0, "y": 1044, "w": 1920, "h": 36, "fill": "#F2F2F2" },
+      "bar": { "x": 0, "y": 1044, "w": 1920, "h": 36, "fill": "#000000" },
+      "barFill": {
+        "agenda": "#F2F2F2",
+        "section": "#D9D9D9",
+        "default": "#000000",
+        "_note": "본문 푸터 바 배경색을 슬라이드 kind별로 결정(bar.fill은 fallback). default(검정) 바에서만 보안칩=security_level_N_dark.png + 로고=penta_white_small 사용. layouts.footerBarFill/footerIsDarkBar 참조."
+      },
       "wordmark": { "x": 10, "y": 1054, "w": 142, "h": 16 },
       "securityChip": { "x": 1700, "y": 1056, "w": 210, "h": 14 }
     }
@@ -107,12 +116,14 @@
   "coverMaster": {
     "wordmark": { "x": 61, "y": 57, "w": 243, "h": 27 },
     "earth": { "x": 952, "y": 455, "w": 970, "h": 627 },
-    "awards": { "x": 61, "y": 978, "w": 406, "h": 80 }
+    "awards": { "x": 61, "y": 978, "w": 406, "h": 80 },
+    "securityChip": { "x": 1530, "y": 1022, "w": 330, "h": 22 }
   },
   "assets": {
     "basePath": "/ppt-assets",
     "pentaLarge": "penta_black_large.png",
     "pentaSmall": "penta_black_small.png",
+    "pentaWhiteSmall": "penta_white_small.png",
     "pentaColor": "penta_color.png",
     "earth": "earth_security_node.png",
     "awardsCover": "awards_badge_cover.png",

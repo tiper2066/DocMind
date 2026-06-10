@@ -1,7 +1,13 @@
 import Link from "next/link";
 import Image from "next/image";
 import { auth } from "@/auth";
+import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { signOutAction } from "@/lib/auth-actions";
 import { NavLink } from "./NavLink";
 import { MobileNav } from "./MobileNav";
@@ -46,9 +52,21 @@ export async function TopNav() {
         <div className="hidden items-center gap-3 md:flex">
           <span className="text-sm text-steel">{session?.user?.email}</span>
           <form action={signOutAction}>
-            <Button type="submit" variant="ghost" size="sm">
-              로그아웃
-            </Button>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    type="submit"
+                    variant="ghost"
+                    size="icon"
+                    aria-label="로그아웃"
+                  />
+                }
+              >
+                <LogOut className="size-4" />
+              </TooltipTrigger>
+              <TooltipContent>로그아웃</TooltipContent>
+            </Tooltip>
           </form>
         </div>
 

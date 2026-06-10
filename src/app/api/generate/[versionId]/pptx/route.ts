@@ -6,7 +6,18 @@ import { documents, documentVersions } from "@/db/schema";
 import { getWorkspaceContext } from "@/lib/rbac";
 import { renderPptx } from "@/lib/ppt/pptx";
 import { DeckSchema } from "@/lib/ppt/types";
-import { uploadPptx, createPptxDownloadUrl } from "@/lib/storage";
+import { uploadPptx, downloadPptx } from "@/lib/storage";
+
+const PPTX_MIME =
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+
+// RFC 5987 ext-value: percent-encode everything outside attr-char.
+function rfc5987(value: string): string {
+  return encodeURIComponent(value).replace(
+    /['()*]/g,
+    (c) => "%" + c.charCodeAt(0).toString(16).toUpperCase(),
+  );
+}
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -49,22 +60,36 @@ export async function GET(
     .trim();
   const downloadName = `${safeTitle} v${row.v.version}.pptx`;
 
+  let bytes: ArrayBuffer;
   if (row.v.pptxObjectKey) {
-    const url = await createPptxDownloadUrl(row.v.pptxObjectKey, downloadName);
-    return NextResponse.json({ url, cached: true });
+    bytes = await downloadPptx(row.v.pptxObjectKey);
+  } else {
+    const deck = DeckSchema.parse(row.v.slidesJson);
+    const buf = await renderPptx(deck);
+
+    const key = `${ctx.workspaceId}/${row.v.documentId}/v${row.v.version}.pptx`;
+    await uploadPptx(key, buf);
+
+    await db
+      .update(documentVersions)
+      .set({ pptxObjectKey: key })
+      .where(eq(documentVersions.id, row.v.id));
+
+    bytes = buf.buffer.slice(
+      buf.byteOffset,
+      buf.byteOffset + buf.byteLength,
+    ) as ArrayBuffer;
   }
 
-  const deck = DeckSchema.parse(row.v.slidesJson);
-  const buf = await renderPptx(deck);
+  // ASCII 폴백 filename + RFC 5987 filename*(UTF-8) 동시 제공 → 한글 파일명 정상 표기.
+  const asciiFallback = downloadName.replace(/[^\x20-\x7E]/g, "_");
 
-  const key = `${ctx.workspaceId}/${row.v.documentId}/v${row.v.version}.pptx`;
-  await uploadPptx(key, buf);
-
-  await db
-    .update(documentVersions)
-    .set({ pptxObjectKey: key })
-    .where(eq(documentVersions.id, row.v.id));
-
-  const url = await createPptxDownloadUrl(key, downloadName);
-  return NextResponse.json({ url, cached: false });
+  return new Response(bytes, {
+    headers: {
+      "Content-Type": PPTX_MIME,
+      "Content-Disposition": `attachment; filename="${asciiFallback}"; filename*=UTF-8''${rfc5987(downloadName)}`,
+      "X-Download-Filename": rfc5987(downloadName),
+      "Cache-Control": "no-store",
+    },
+  });
 }

@@ -11,7 +11,18 @@ import { generateDeck, normalizeDocumentSources } from "@/lib/ppt/generate";
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
-const Body = z.object({ documentId: z.string().uuid() });
+const Body = z.object({
+  documentId: z.string().uuid(),
+  securityLevel: z
+    .union([
+      z.literal(1),
+      z.literal(2),
+      z.literal(3),
+      z.literal(4),
+      z.literal(5),
+    ])
+    .default(1),
+});
 
 export async function POST(req: Request) {
   const ctx = await getWorkspaceContext();
@@ -88,7 +99,7 @@ export async function POST(req: Request) {
       length: answers.length!,
     },
     lengthPages,
-    securityLevel: 1,
+    securityLevel: parsed.data.securityLevel,
     forcedTitle: doc.titleManual ? doc.title : undefined,
   });
 

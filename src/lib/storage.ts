@@ -97,21 +97,14 @@ export async function uploadPptx(
   if (error) throw error;
 }
 
-export async function createPptxDownloadUrl(
-  key: string,
-  filename?: string,
-): Promise<string> {
+export async function downloadPptx(key: string): Promise<ArrayBuffer> {
   const { data, error } = await supabase.storage
     .from(BUCKETS.pptx)
-    .createSignedUrl(
-      key,
-      DOWNLOAD_TTL_SECONDS,
-      filename ? { download: filename } : undefined,
-    );
+    .download(key);
   if (error || !data) {
-    throw error ?? new Error("createSignedUrl returned no data");
+    throw error ?? new Error("pptx download returned no data");
   }
-  return data.signedUrl;
+  return await data.arrayBuffer();
 }
 
 // 문서 삭제 시 버전들의 .pptx 오브젝트 정리. best-effort — 실패해도 throw 하지 않는다.

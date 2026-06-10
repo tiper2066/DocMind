@@ -50,5 +50,5 @@ export const STEP_LABELS: Record<AnswerableStep, string> = {
   cta: "콜투액션",
   objection: "예상 반론",
   keyMessage: "핵심 메시지",
-  length: "분량",
+  length: "분량 및 보안 레벨",
 };

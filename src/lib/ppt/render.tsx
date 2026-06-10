@@ -5,17 +5,30 @@ import {
   PPT_LAYOUTS,
   FOOTER_MASTER_BODY,
   COVER_MASTER,
-  bulletRowY,
+  BACK_COVER,
+  BACK_COVER_COPYRIGHT,
+  bulletRowYs,
   agendaRowY,
   metricCardX,
+  diagramGeometry,
   assetPath,
+  footerBarFill,
+  footerIsDarkBar,
   type TextBox,
+  type TextStyle,
   type ShapeBox,
+  type SlideKind,
 } from "./layouts";
 import type { Slide, DeckMeta } from "./types";
 
 export const CANVAS_W = tokens.canvas.width;
 export const CANVAS_H = tokens.canvas.height;
+
+const VALIGN_JUSTIFY: Record<NonNullable<TextStyle["valign"]>, string> = {
+  top: "flex-start",
+  middle: "center",
+  bottom: "flex-end",
+};
 
 function boxStyle(box: TextBox): React.CSSProperties {
   const s = box.style;
@@ -34,6 +47,9 @@ function boxStyle(box: TextBox): React.CSSProperties {
     fontFamily: s.family,
     overflow: "hidden",
     whiteSpace: "pre-wrap",
+    ...(s.valign
+      ? { display: "flex", flexDirection: "column", justifyContent: VALIGN_JUSTIFY[s.valign] }
+      : {}),
   };
 }
 
@@ -59,7 +75,14 @@ function Shapes({ shapes }: { shapes?: ShapeBox[] }) {
   );
 }
 
-function FooterMaster({ securityLevel }: { securityLevel: 1 | 2 | 3 | 4 | 5 }) {
+function FooterMaster({
+  securityLevel,
+  kind,
+}: {
+  securityLevel: 1 | 2 | 3 | 4 | 5;
+  kind: SlideKind;
+}) {
+  const dark = footerIsDarkBar(kind);
   return (
     <>
       <div
@@ -69,12 +92,12 @@ function FooterMaster({ securityLevel }: { securityLevel: 1 | 2 | 3 | 4 | 5 }) {
           top: FOOTER_MASTER_BODY.bar.y,
           width: FOOTER_MASTER_BODY.bar.w,
           height: FOOTER_MASTER_BODY.bar.h,
-          backgroundColor: FOOTER_MASTER_BODY.bar.fill,
+          backgroundColor: footerBarFill(kind),
         }}
         aria-hidden
       />
       <img
-        src={assetPath("securityLevel", securityLevel)}
+        src={assetPath("securityLevel", securityLevel, { dark })}
         alt=""
         style={{
           position: "absolute",
@@ -86,7 +109,7 @@ function FooterMaster({ securityLevel }: { securityLevel: 1 | 2 | 3 | 4 | 5 }) {
         }}
       />
       <img
-        src={assetPath("pentaSmall")}
+        src={assetPath(dark ? "pentaWhiteSmall" : "pentaSmall")}
         alt=""
         style={{
           position: "absolute",
@@ -101,7 +124,11 @@ function FooterMaster({ securityLevel }: { securityLevel: 1 | 2 | 3 | 4 | 5 }) {
   );
 }
 
-function CoverMaster() {
+function CoverMaster({
+  securityLevel,
+}: {
+  securityLevel: 1 | 2 | 3 | 4 | 5;
+}) {
   return (
     <>
       <img
@@ -140,19 +167,34 @@ function CoverMaster() {
           objectFit: "contain",
         }}
       />
+      <img
+        src={assetPath("securityLevel", securityLevel)}
+        alt=""
+        style={{
+          position: "absolute",
+          left: COVER_MASTER.securityChip.x,
+          top: COVER_MASTER.securityChip.y,
+          width: COVER_MASTER.securityChip.w,
+          height: COVER_MASTER.securityChip.h,
+          objectFit: "contain",
+          objectPosition: "right",
+        }}
+      />
     </>
   );
 }
 
 function CoverContent({
   slide,
+  securityLevel,
 }: {
   slide: Extract<Slide, { kind: "cover" }>;
+  securityLevel: 1 | 2 | 3 | 4 | 5;
 }) {
   const L = PPT_LAYOUTS.cover.text;
   return (
     <>
-      <CoverMaster />
+      <CoverMaster securityLevel={securityLevel} />
       <div style={boxStyle(L.title)}>{slide.title}</div>
       {slide.subtitle && <div style={boxStyle(L.subtitle)}>{slide.subtitle}</div>}
       <div style={boxStyle(L.authorDate)}>
@@ -221,6 +263,7 @@ function BulletsContent({
   slide: Extract<Slide, { kind: "bullets" }>;
 }) {
   const L = PPT_LAYOUTS.bullets;
+  const ys = bulletRowYs(slide.bullets.map((b) => b.level));
   return (
     <>
       <Shapes shapes={L.shapes} />
@@ -232,7 +275,7 @@ function BulletsContent({
             key={i}
             style={{
               ...boxStyle(proto),
-              top: bulletRowY(i, b.level),
+              top: ys[i],
             }}
           >
             <span aria-hidden style={{ marginRight: 16 }}>
@@ -329,31 +372,118 @@ function ImageContent({
   slide: Extract<Slide, { kind: "image" }>;
 }) {
   const L = PPT_LAYOUTS.image;
-  const imageBox = { x: 220, y: 280, w: 1480, h: 680 };
+  const nodes = slide.nodes ?? ["입력", "처리", "출력"];
+  const geo = diagramGeometry(nodes.length, slide.direction ?? "horizontal");
+  const accent = tokens.color.accent.penta;
+  const ls = geo.labelStyle;
   return (
     <>
       <Shapes shapes={L.shapes} />
       {slide.title && <div style={boxStyle(L.text.title)}>{slide.title}</div>}
-      <div
+      <svg
+        width={CANVAS_W}
+        height={CANVAS_H}
+        style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}
+        aria-hidden
+      >
+        <defs>
+          <marker
+            id="diagram-arrow"
+            markerUnits="userSpaceOnUse"
+            markerWidth="22"
+            markerHeight="22"
+            refX="17"
+            refY="11"
+            orient="auto"
+          >
+            <path d="M2,2 L20,11 L2,20 Z" fill={accent} />
+          </marker>
+        </defs>
+        {geo.arrows.map((a, i) => (
+          <line
+            key={i}
+            x1={a.x1}
+            y1={a.y1}
+            x2={a.x2}
+            y2={a.y2}
+            stroke={accent}
+            strokeWidth={3}
+            markerEnd="url(#diagram-arrow)"
+          />
+        ))}
+      </svg>
+      {geo.boxes.map((b, i) => (
+        <div
+          key={i}
+          style={{
+            position: "absolute",
+            left: b.x,
+            top: b.y,
+            width: b.w,
+            height: b.h,
+            border: `2px solid ${accent}`,
+            borderRadius: 16,
+            backgroundColor: tokens.color.bg,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            textAlign: "center",
+            padding: 16,
+            fontSize: `${ls.size}px`,
+            fontWeight: ls.weight,
+            color: ls.color,
+            lineHeight: ls.lineHeight ?? 1.3,
+            fontFamily: ls.family,
+          }}
+        >
+          {nodes[i]}
+        </div>
+      ))}
+      {slide.caption && <div style={boxStyle(L.text.caption)}>{slide.caption}</div>}
+    </>
+  );
+}
+
+function BackCoverContent() {
+  const B = BACK_COVER;
+  return (
+    <>
+      <img
+        src={assetPath("pentaColor")}
+        alt=""
         style={{
           position: "absolute",
-          left: imageBox.x,
-          top: imageBox.y,
-          width: imageBox.w,
-          height: imageBox.h,
-          border: "1px solid #E5E5E5",
-          backgroundColor: "#FAFAFA",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "#999B9E",
-          fontSize: 18,
+          left: B.wordmark.x,
+          top: B.wordmark.y,
+          width: B.wordmark.w,
+          height: B.wordmark.h,
+          objectFit: "contain",
         }}
-        aria-label={`Image: ${slide.imageRef}`}
-      >
-        🖼️ {slide.imageRef}
-      </div>
-      {slide.caption && <div style={boxStyle(L.text.caption)}>{slide.caption}</div>}
+      />
+      {B.urls.map((u, i) => (
+        <Fragment key={i}>
+          <div style={boxStyle({ ...B.urlLabelProto, y: B.urlLabelProto.y + i * B.urlRowGap })}>
+            {u.label}
+          </div>
+          <div style={boxStyle({ ...B.urlValueProto, y: B.urlValueProto.y + i * B.urlRowGap })}>
+            {u.url}
+          </div>
+        </Fragment>
+      ))}
+      <img
+        src={assetPath("awardsBack")}
+        alt=""
+        style={{
+          position: "absolute",
+          left: B.awards.x,
+          top: B.awards.y,
+          width: B.awards.w,
+          height: B.awards.h,
+          objectFit: "contain",
+        }}
+      />
+      <div style={shapeStyle(B.footerBar)} aria-hidden />
+      <div style={boxStyle(B.copyright)}>{BACK_COVER_COPYRIGHT}</div>
     </>
   );
 }
@@ -370,10 +500,16 @@ function CtaContent({ slide }: { slide: Extract<Slide, { kind: "cta" }> }) {
   );
 }
 
-function SlideContent({ slide }: { slide: Slide }) {
+function SlideContent({
+  slide,
+  securityLevel,
+}: {
+  slide: Slide;
+  securityLevel: 1 | 2 | 3 | 4 | 5;
+}) {
   switch (slide.kind) {
     case "cover":
-      return <CoverContent slide={slide} />;
+      return <CoverContent slide={slide} securityLevel={securityLevel} />;
     case "agenda":
       return <AgendaContent slide={slide} />;
     case "section":
@@ -390,6 +526,8 @@ function SlideContent({ slide }: { slide: Slide }) {
       return <ImageContent slide={slide} />;
     case "cta":
       return <CtaContent slide={slide} />;
+    case "backCover":
+      return <BackCoverContent />;
   }
 }
 
@@ -402,7 +540,7 @@ export function SlideCanvas({
   meta: DeckMeta;
   scale?: number;
 }) {
-  const isCover = slide.kind === "cover";
+  const noFooter = slide.kind === "cover" || slide.kind === "backCover";
   return (
     <div
       style={{
@@ -421,8 +559,13 @@ export function SlideCanvas({
           transformOrigin: "top left",
         }}
       >
-        <SlideContent slide={slide} />
-        {!isCover && <FooterMaster securityLevel={meta.securityLevel} />}
+        <SlideContent slide={slide} securityLevel={meta.securityLevel} />
+        {!noFooter && (
+          <FooterMaster
+            securityLevel={meta.securityLevel}
+            kind={slide.kind as SlideKind}
+          />
+        )}
       </div>
     </div>
   );

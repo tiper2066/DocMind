@@ -30,7 +30,7 @@ const CoverSlide = z.object({
 
 const AgendaSlide = z.object({
   kind: z.literal("agenda"),
-  items: z.array(z.string().min(1).max(80)).min(2).max(7),
+  items: z.array(z.string().min(1).max(80)).min(1).max(9),
 });
 
 const SectionSlide = z.object({
@@ -84,9 +84,17 @@ const QuoteSlide = z.object({
 
 const ImageSlide = z.object({
   kind: z.literal("image"),
-  title: z.string().max(60).optional(),
-  imageRef: z.string().min(1).max(200),
+  // title/nodes 는 신규 생성 시 fill 도구가 필수로 채운다. 스키마는 기존
+  // 저장 deck(nodes 없는 구버전 image)과의 호환을 위해 optional 로 둔다.
+  title: z.string().min(1).max(60).optional(),
+  nodes: z.array(z.string().min(1).max(40)).min(2).max(5).optional(),
+  direction: z.enum(["horizontal", "vertical"]).optional(),
   caption: z.string().max(140).optional(),
+  imageRef: z.string().max(200).optional(),
+});
+
+const BackCoverSlide = z.object({
+  kind: z.literal("backCover"),
 });
 
 const CtaSlide = z.object({
@@ -106,6 +114,7 @@ const SlideBody = z.discriminatedUnion("kind", [
   QuoteSlide,
   ImageSlide,
   CtaSlide,
+  BackCoverSlide,
 ]);
 
 export const SlideSchema = z.intersection(
@@ -138,12 +147,12 @@ export type DeckMeta = z.infer<typeof DeckMetaSchema>;
 
 export const DeckSchema = z.object({
   meta: DeckMetaSchema,
-  slides: z.array(SlideSchema).min(4).max(30),
+  slides: z.array(SlideSchema).min(4).max(32),
   sourceRefs: z.array(SourceRef).max(40).optional(),
 });
 
 export type Deck = z.infer<typeof DeckSchema>;
 
-export function slideKindFor(slide: Slide): SlideKind {
+export function slideKindFor(slide: Slide): Slide["kind"] {
   return slide.kind;
 }

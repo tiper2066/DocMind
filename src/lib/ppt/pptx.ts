@@ -6,12 +6,18 @@ import {
   PPT_LAYOUTS,
   FOOTER_MASTER_BODY,
   COVER_MASTER,
-  bulletRowY,
+  BACK_COVER,
+  BACK_COVER_COPYRIGHT,
+  bulletRowYs,
   agendaRowY,
   metricCardX,
+  diagramGeometry,
   assetPath,
+  footerBarFill,
+  footerIsDarkBar,
   type TextBox,
   type ShapeBox,
+  type SlideKind,
 } from "./layouts";
 import type { Deck, Slide } from "./types";
 
@@ -51,7 +57,7 @@ function textOpts(box: TextBox, align?: "left" | "center" | "right") {
     bold: s.weight === 700,
     color: s.color.replace("#", ""),
     align: align ?? s.align ?? "left",
-    valign: "top" as const,
+    valign: s.valign ?? "top",
     margin: 0,
     paraSpaceBefore: 0,
     paraSpaceAfter: 0,
@@ -89,24 +95,45 @@ function addImage(
   });
 }
 
-function applyFooter(slide: pptxgen.Slide, securityLevel: 1 | 2 | 3 | 4 | 5) {
-  shapeRect(slide, FOOTER_MASTER_BODY.bar);
+function applyFooter(
+  slide: pptxgen.Slide,
+  securityLevel: 1 | 2 | 3 | 4 | 5,
+  kind: SlideKind,
+) {
+  const dark = footerIsDarkBar(kind);
+  shapeRect(slide, { ...FOOTER_MASTER_BODY.bar, fill: footerBarFill(kind) });
   addImage(
     slide,
-    assetPath("securityLevel", securityLevel),
+    assetPath("securityLevel", securityLevel, { dark }),
     FOOTER_MASTER_BODY.securityChip,
   );
-  addImage(slide, assetPath("pentaSmall"), FOOTER_MASTER_BODY.wordmark);
+  addImage(
+    slide,
+    assetPath(dark ? "pentaWhiteSmall" : "pentaSmall"),
+    FOOTER_MASTER_BODY.wordmark,
+  );
 }
 
-function applyCoverMaster(slide: pptxgen.Slide) {
+function applyCoverMaster(
+  slide: pptxgen.Slide,
+  securityLevel: 1 | 2 | 3 | 4 | 5,
+) {
   addImage(slide, assetPath("pentaLarge"), COVER_MASTER.wordmark);
   addImage(slide, assetPath("earth"), COVER_MASTER.earth);
   addImage(slide, assetPath("awardsCover"), COVER_MASTER.awards);
+  addImage(
+    slide,
+    assetPath("securityLevel", securityLevel),
+    COVER_MASTER.securityChip,
+  );
 }
 
-function fillCover(slide: pptxgen.Slide, s: Extract<Slide, { kind: "cover" }>) {
-  applyCoverMaster(slide);
+function fillCover(
+  slide: pptxgen.Slide,
+  s: Extract<Slide, { kind: "cover" }>,
+  securityLevel: 1 | 2 | 3 | 4 | 5,
+) {
+  applyCoverMaster(slide, securityLevel);
   const L = PPT_LAYOUTS.cover.text;
   slide.addText(s.title, textOpts(L.title));
   if (s.subtitle) slide.addText(s.subtitle, textOpts(L.subtitle));
@@ -149,9 +176,10 @@ function fillBullets(
   const L = PPT_LAYOUTS.bullets;
   L.shapes?.forEach((sh) => shapeRect(slide, sh));
   slide.addText(s.title, textOpts(L.text.title));
+  const ys = bulletRowYs(s.bullets.map((b) => b.level));
   s.bullets.forEach((b, i) => {
     const proto = b.level === 0 ? L.text.bulletL0Proto : L.text.bulletL1Proto;
-    const box = { ...proto, y: bulletRowY(i, b.level) };
+    const box = { ...proto, y: ys[i] };
     const marker = b.level === 0 ? "■ " : "— ";
     slide.addText(marker + b.text, textOpts(box));
   });
@@ -208,28 +236,62 @@ function fillImage(slide: pptxgen.Slide, s: Extract<Slide, { kind: "image" }>) {
   const L = PPT_LAYOUTS.image;
   L.shapes?.forEach((sh) => shapeRect(slide, sh));
   if (s.title) slide.addText(s.title, textOpts(L.text.title));
-  const imageBox = { x: 220, y: 280, w: 1480, h: 680 };
-  slide.addShape("rect", {
-    x: pxToInchX(imageBox.x),
-    y: pxToInchY(imageBox.y),
-    w: pxToInchX(imageBox.w),
-    h: pxToInchY(imageBox.h),
-    fill: { color: "FAFAFA" },
-    line: { color: "E5E5E5", width: 1 },
+
+  const nodes = s.nodes ?? ["입력", "처리", "출력"];
+  const geo = diagramGeometry(nodes.length, s.direction ?? "horizontal");
+  const accent = tokens.color.accent.penta.replace("#", "");
+  const ls = geo.labelStyle;
+
+  // 인접 노드 사이 직선 화살표(끝점은 우리가 계산 → 항상 forward, flip 불필요).
+  geo.arrows.forEach((a) => {
+    slide.addShape("line", {
+      x: pxToInchX(a.x1),
+      y: pxToInchY(a.y1),
+      w: pxToInchX(a.x2 - a.x1),
+      h: pxToInchY(a.y2 - a.y1),
+      line: { color: accent, width: 2.5, endArrowType: "triangle" },
+    });
   });
-  slide.addText(`🖼️ ${s.imageRef}`, {
-    x: pxToInchX(imageBox.x),
-    y: pxToInchY(imageBox.y + imageBox.h / 2 - 20),
-    w: pxToInchX(imageBox.w),
-    h: pxToInchY(40),
-    fontFace: "Pretendard",
-    fontSize: 12,
-    color: "999B9E",
-    align: "center",
-    valign: "middle",
-    isTextBox: true,
+
+  nodes.forEach((label, i) => {
+    const b = geo.boxes[i];
+    slide.addText(label, {
+      x: pxToInchX(b.x),
+      y: pxToInchY(b.y),
+      w: pxToInchX(b.w),
+      h: pxToInchY(b.h),
+      shape: "roundRect",
+      rectRadius: 0.08,
+      fill: { color: tokens.color.bg.replace("#", "") },
+      line: { color: accent, width: 2 },
+      fontFace: "Pretendard",
+      fontSize: pxToPt(ls.size),
+      color: ls.color.replace("#", ""),
+      align: "center",
+      valign: "middle",
+      isTextBox: true,
+    });
   });
+
   if (s.caption) slide.addText(s.caption, textOpts(L.text.caption, "center"));
+}
+
+function fillBackCover(slide: pptxgen.Slide) {
+  const B = BACK_COVER;
+  addImage(slide, assetPath("pentaColor"), B.wordmark);
+  B.urls.forEach((u, i) => {
+    slide.addText(
+      u.label,
+      textOpts({ ...B.urlLabelProto, y: B.urlLabelProto.y + i * B.urlRowGap }),
+    );
+    slide.addText(
+      u.url,
+      textOpts({ ...B.urlValueProto, y: B.urlValueProto.y + i * B.urlRowGap }),
+    );
+  });
+  addImage(slide, assetPath("awardsBack"), B.awards);
+  shapeRect(slide, B.footerBar);
+  slide.addText(BACK_COVER_COPYRIGHT, textOpts(B.copyright, "center"));
 }
 
 function fillCta(slide: pptxgen.Slide, s: Extract<Slide, { kind: "cta" }>) {
@@ -253,39 +315,42 @@ export async function renderPptx(deck: Deck): Promise<Buffer> {
 
     switch (slide.kind) {
       case "cover":
-        fillCover(sl, slide);
+        fillCover(sl, slide, deck.meta.securityLevel);
         break;
       case "agenda":
         fillAgenda(sl, slide);
-        applyFooter(sl, deck.meta.securityLevel);
+        applyFooter(sl, deck.meta.securityLevel, slide.kind);
         break;
       case "section":
         fillSection(sl, slide);
-        applyFooter(sl, deck.meta.securityLevel);
+        applyFooter(sl, deck.meta.securityLevel, slide.kind);
         break;
       case "bullets":
         fillBullets(sl, slide);
-        applyFooter(sl, deck.meta.securityLevel);
+        applyFooter(sl, deck.meta.securityLevel, slide.kind);
         break;
       case "twoCol":
         fillTwoCol(sl, slide);
-        applyFooter(sl, deck.meta.securityLevel);
+        applyFooter(sl, deck.meta.securityLevel, slide.kind);
         break;
       case "metric":
         fillMetric(sl, slide);
-        applyFooter(sl, deck.meta.securityLevel);
+        applyFooter(sl, deck.meta.securityLevel, slide.kind);
         break;
       case "quote":
         fillQuote(sl, slide);
-        applyFooter(sl, deck.meta.securityLevel);
+        applyFooter(sl, deck.meta.securityLevel, slide.kind);
         break;
       case "image":
         fillImage(sl, slide);
-        applyFooter(sl, deck.meta.securityLevel);
+        applyFooter(sl, deck.meta.securityLevel, slide.kind);
         break;
       case "cta":
         fillCta(sl, slide);
-        applyFooter(sl, deck.meta.securityLevel);
+        applyFooter(sl, deck.meta.securityLevel, slide.kind);
+        break;
+      case "backCover":
+        fillBackCover(sl);
         break;
     }
   }

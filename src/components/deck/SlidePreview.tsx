@@ -15,7 +15,7 @@ export function SlidePreview({
   return (
     <div
       className="overflow-hidden rounded border bg-white shadow-sm"
-      style={{ width, height }}
+      style={{ width, height, flexShrink: 0 }}
     >
       <SlideCanvas slide={slide} meta={meta} scale={scale} />
     </div>

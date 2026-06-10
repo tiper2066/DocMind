@@ -27,6 +27,7 @@ export interface TextStyle {
   tracking?: number;
   lineHeight?: number;
   align?: 'left' | 'center' | 'right';
+  valign?: 'top' | 'middle' | 'bottom';
   family?: string;
 }
 
@@ -67,14 +68,28 @@ function rule(x: number, y: number, w = t.rule.accent.width, h = t.rule.accent.h
 
 export const FOOTER_MASTER_BODY = {
   bar: { ...t.footerMaster.body.bar } satisfies ShapeBox,
+  barFill: { ...t.footerMaster.body.barFill },
   securityChip: { ...t.footerMaster.body.securityChip },
   wordmark: { ...t.footerMaster.body.wordmark },
 } as const;
+
+// 본문 슬라이드 푸터 바 색은 kind 별로 다르다(agenda=밝은회색, section=회색, 나머지=검정).
+// 검정 바일 때만 보안칩·로고를 어두운 배경용(흰 텍스트) 에셋으로 바꾼다.
+export function footerBarFill(kind: SlideKind): string {
+  if (kind === 'agenda') return t.footerMaster.body.barFill.agenda;
+  if (kind === 'section') return t.footerMaster.body.barFill.section;
+  return t.footerMaster.body.barFill.default;
+}
+
+export function footerIsDarkBar(kind: SlideKind): boolean {
+  return footerBarFill(kind) === t.footerMaster.body.barFill.default;
+}
 
 export const COVER_MASTER = {
   wordmark: { ...t.coverMaster.wordmark },
   earth: { ...t.coverMaster.earth },
   awards: { ...t.coverMaster.awards },
+  securityChip: { ...t.coverMaster.securityChip },
 } as const;
 
 export const PPT_LAYOUTS: Record<SlideKind, LayoutDef> = {
@@ -84,12 +99,12 @@ export const PPT_LAYOUTS: Record<SlideKind, LayoutDef> = {
     description: '표지 — Penta wordmark, earth illustration, awards badge group.',
     text: {
       title: {
-        x: 120, y: 480, w: 800, h: 120,
-        style: { size: S.display, weight: W.bold, color: C.ink, tracking: TR.display, lineHeight: t.lineHeight.tight, family: FAMILY },
+        x: 120, y: 360, w: 820, h: 240,
+        style: { size: S['cta.headline'], weight: W.bold, color: C.title, tracking: TR.heading, lineHeight: t.lineHeight.tight, valign: 'bottom', family: FAMILY },
         role: 'title',
       },
       subtitle: {
-        x: 120, y: 620, w: 800, h: 60,
+        x: 120, y: 624, w: 820, h: 60,
         style: { size: S.h3, weight: W.book, color: C.text.secondary, tracking: TR.body, lineHeight: t.lineHeight.normal, family: FAMILY },
         role: 'subtitle',
       },
@@ -110,7 +125,7 @@ export const PPT_LAYOUTS: Record<SlideKind, LayoutDef> = {
     text: {
       title: {
         x: 120, y: 120, w: 1680, h: 80,
-        style: { size: S.h1, weight: W.bold, color: C.ink, tracking: TR.heading, family: FAMILY },
+        style: { size: S.h1, weight: W.bold, color: C.title, tracking: TR.heading, family: FAMILY },
         role: 'title',
       },
       itemIndexProto: {
@@ -144,7 +159,7 @@ export const PPT_LAYOUTS: Record<SlideKind, LayoutDef> = {
       },
       title: {
         x: 120, y: 600, w: 1500, h: 120,
-        style: { size: S.display, weight: W.bold, color: C.ink, tracking: TR.display, lineHeight: t.lineHeight.tight, family: FAMILY },
+        style: { size: S.display, weight: W.bold, color: C.title, tracking: TR.display, lineHeight: t.lineHeight.tight, family: FAMILY },
         role: 'title',
       },
     },
@@ -159,7 +174,7 @@ export const PPT_LAYOUTS: Record<SlideKind, LayoutDef> = {
     text: {
       title: {
         x: 120, y: 120, w: 1680, h: 60,
-        style: { size: S.h2, weight: W.bold, color: C.ink, tracking: TR.heading, family: FAMILY },
+        style: { size: S.h2, weight: W.bold, color: C.title, tracking: TR.heading, family: FAMILY },
         role: 'title',
       },
       bulletL0Proto: {
@@ -192,7 +207,7 @@ export const PPT_LAYOUTS: Record<SlideKind, LayoutDef> = {
     text: {
       title: {
         x: 120, y: 120, w: 1680, h: 60,
-        style: { size: S.h2, weight: W.bold, color: C.ink, tracking: TR.heading, family: FAMILY },
+        style: { size: S.h2, weight: W.bold, color: C.title, tracking: TR.heading, family: FAMILY },
         role: 'title',
       },
       leftLabel: {
@@ -202,7 +217,7 @@ export const PPT_LAYOUTS: Record<SlideKind, LayoutDef> = {
       },
       leftBody: {
         x: 120, y: 320, w: 800, h: 680,
-        style: { size: S.body, weight: W.book, color: C.ink, tracking: TR.tight, lineHeight: t.lineHeight.loose, family: FAMILY },
+        style: { size: S.bodyLg, weight: W.book, color: C.ink, tracking: TR.tight, lineHeight: t.lineHeight.loose, family: FAMILY },
         role: 'left.body',
       },
       rightLabel: {
@@ -212,7 +227,7 @@ export const PPT_LAYOUTS: Record<SlideKind, LayoutDef> = {
       },
       rightBody: {
         x: 1000, y: 320, w: 800, h: 680,
-        style: { size: S.body, weight: W.book, color: C.ink, tracking: TR.tight, lineHeight: t.lineHeight.loose, family: FAMILY },
+        style: { size: S.bodyLg, weight: W.book, color: C.ink, tracking: TR.tight, lineHeight: t.lineHeight.loose, family: FAMILY },
         role: 'right.body',
       },
     },
@@ -226,7 +241,7 @@ export const PPT_LAYOUTS: Record<SlideKind, LayoutDef> = {
     text: {
       title: {
         x: 120, y: 120, w: 1680, h: 60,
-        style: { size: S.h2, weight: W.bold, color: C.ink, tracking: TR.heading, family: FAMILY },
+        style: { size: S.h2, weight: W.bold, color: C.title, tracking: TR.heading, family: FAMILY },
         role: 'title',
       },
       cardLabelProto: {
@@ -284,7 +299,7 @@ export const PPT_LAYOUTS: Record<SlideKind, LayoutDef> = {
     text: {
       title: {
         x: 120, y: 120, w: 1680, h: 60,
-        style: { size: S.h2, weight: W.bold, color: C.ink, tracking: TR.heading, family: FAMILY },
+        style: { size: S.h2, weight: W.bold, color: C.title, tracking: TR.heading, family: FAMILY },
         role: 'title',
       },
       caption: {
@@ -333,11 +348,18 @@ export const imageFullBleed = {
   } satisfies TextBox,
 };
 
-export function assetPath(key: keyof typeof t.assets | string, level?: SecurityLevel): string {
+export function assetPath(
+  key: keyof typeof t.assets | string,
+  level?: SecurityLevel,
+  opts?: { dark?: boolean },
+): string {
   const base = t.assets.basePath;
   if (key === 'securityLevel') {
     const lv = level ?? 1;
-    return `${base}/${t.assets.securityLevel[String(lv) as '1' | '2' | '3' | '4' | '5']}`;
+    const file = t.assets.securityLevel[String(lv) as '1' | '2' | '3' | '4' | '5'];
+    // 어두운 배경용 변형은 같은 파일명 + `_dark` 접미사 (security_level_N_dark.png).
+    const resolved = opts?.dark ? file.replace(/\.png$/, '_dark.png') : file;
+    return `${base}/${resolved}`;
   }
   const file = (t.assets as Record<string, unknown>)[key as string];
   if (typeof file !== 'string') {
@@ -346,10 +368,117 @@ export function assetPath(key: keyof typeof t.assets | string, level?: SecurityL
   return `${base}/${file}`;
 }
 
-export function bulletRowY(rowIndex: number, level: 0 | 1, baseY = 260): number {
-  const gap = level === 0 ? t.spacing.gap.bulletL0 : t.spacing.gap.bulletL1;
-  return baseY + rowIndex * gap;
+// 행마다 "그 행을 떠나는 높이"를 누적해 다음 행 top 을 정한다. 단일 gap×index 방식은
+// L0/L1 이 섞이면 누적이 어긋나 행이 겹친다(이전 버그). 누적식이라 레벨 혼합도 안전.
+export function bulletRowYs(levels: Array<0 | 1>, baseY = 260): number[] {
+  const ys: number[] = [];
+  let y = baseY;
+  for (let i = 0; i < levels.length; i++) {
+    ys.push(y);
+    const advance =
+      levels[i] === 0 ? t.spacing.gap.bulletL0 : t.spacing.gap.bulletL1;
+    y += advance;
+  }
+  return ys;
 }
+
+export interface DiagramArrow {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+export interface DiagramGeometry {
+  boxes: Box[];
+  arrows: DiagramArrow[];
+  vertical: boolean;
+  labelStyle: TextStyle;
+}
+
+// image 슬라이드용 선형 flow 다이어그램 기하. 노드 2~5개를 등간격 배치하고
+// 인접 노드 사이에만 화살표를 둔다(끝점을 우리가 계산 → 겹침 없음, 결정적).
+export function diagramGeometry(
+  count: number,
+  direction: 'horizontal' | 'vertical' = 'horizontal',
+): DiagramGeometry {
+  const n = Math.max(2, Math.min(5, count));
+  const labelStyle: TextStyle = {
+    size: S.h3,
+    weight: W.medium,
+    color: C.ink2,
+    align: 'center',
+    valign: 'middle',
+    lineHeight: t.lineHeight.normal,
+    family: FAMILY,
+  };
+
+  if (direction === 'vertical') {
+    const areaY = 300;
+    const areaH = 660;
+    const gap = 56;
+    const boxW = 760;
+    const x = (1920 - boxW) / 2;
+    const boxH = (areaH - (n - 1) * gap) / n;
+    const boxes: Box[] = [];
+    for (let i = 0; i < n; i++) {
+      boxes.push({ x, y: areaY + i * (boxH + gap), w: boxW, h: boxH });
+    }
+    const arrows: DiagramArrow[] = [];
+    for (let i = 0; i < n - 1; i++) {
+      const cx = x + boxW / 2;
+      arrows.push({ x1: cx, y1: boxes[i].y + boxH, x2: cx, y2: boxes[i + 1].y });
+    }
+    return { boxes, arrows, vertical: true, labelStyle };
+  }
+
+  const areaX = 220;
+  const areaW = 1480;
+  const gap = 72;
+  const boxH = 180;
+  const cy = 620;
+  const boxW = (areaW - (n - 1) * gap) / n;
+  const boxes: Box[] = [];
+  for (let i = 0; i < n; i++) {
+    boxes.push({ x: areaX + i * (boxW + gap), y: cy - boxH / 2, w: boxW, h: boxH });
+  }
+  const arrows: DiagramArrow[] = [];
+  for (let i = 0; i < n - 1; i++) {
+    arrows.push({ x1: boxes[i].x + boxW, y1: cy, x2: boxes[i + 1].x, y2: cy });
+  }
+  return { boxes, arrows, vertical: false, labelStyle };
+}
+
+// 뒷표지(Back Cover) — CTA 다음 마지막 슬라이드. footer 미사용(독립 마스터).
+// 이미지 박스 w·h 는 에셋 실제 종횡비에 맞춘다(penta_color 8.86:1, awards 9.37:1).
+// 종횡비를 맞춰야 미리보기(contain)와 PPT 렌더가 동일하게 보이고 왜곡이 없다.
+export const BACK_COVER = {
+  wordmark: { x: 770, y: 408, w: 380, h: 43 },
+  urls: [
+    { label: 'KOREA', url: 'www.pentasecurity.co.kr' },
+    { label: 'GLOBAL', url: 'www.pentasecurity.com' },
+    { label: 'JAPAN', url: 'www.pentasecurity.co.jp' },
+  ],
+  urlRowGap: 36,
+  urlLabelProto: {
+    x: 700, y: 504, w: 200, h: 28,
+    style: { size: S.small, weight: W.bold, color: C.ink, tracking: TR.body, align: 'right' as const, valign: 'middle' as const, family: FAMILY },
+    role: 'url.label',
+  } satisfies TextBox,
+  urlValueProto: {
+    x: 920, y: 504, w: 320, h: 28,
+    style: { size: S.small, weight: W.book, color: C.text.secondary, tracking: TR.body, align: 'left' as const, valign: 'middle' as const, family: FAMILY },
+    role: 'url.value',
+  } satisfies TextBox,
+  awards: { x: 210, y: 850, w: 1500, h: 160 },
+  footerBar: { x: 0, y: 1044, w: 1920, h: 36, fill: '#000000' } satisfies ShapeBox,
+  copyright: {
+    x: 0, y: 1050, w: 1920, h: 24,
+    style: { size: S.micro, weight: W.book, color: '#FFFFFF', tracking: TR.body, align: 'center' as const, valign: 'middle' as const, family: FAMILY },
+    role: 'copyright',
+  } satisfies TextBox,
+} as const;
+
+export const BACK_COVER_COPYRIGHT = '© 2026 Penta Security Inc. All rights reserved.';
 
 export function agendaRowY(rowIndex: number, baseY = 320, rowGap = 80): number {
   return baseY + rowIndex * rowGap;

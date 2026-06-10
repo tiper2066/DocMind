@@ -982,7 +982,8 @@ SENTRY_DSN=
 
 ## 16. 결정 로그
 
-- **Vercel 배포 대응 — 리전 고정 + jsdom→linkedom** (2026-06-10):
+- **Vercel 배포 대응 — Node 22 고정 + 리전 고정 + jsdom→linkedom** (2026-06-10):
+  - **Node 버전 고정(근본 원인)**: [package.json](../package.json) `engines.node: "22.x"` + Vercel Node.js Version 22.x. `serverExternalPackages` 의 런타임 `require()` 가 ESM-only 의존성(pdfjs-dist·whatwg-encoding@3·jsdom 그래프)을 만나면, **Node <22.12 에서 `ERR_REQUIRE_ESM`** 으로 `/api/inngest` 가 500 크래시. 로컬 Node 22.18 은 `require(ESM)` 지원이라 통과 → 배포(기본 Node 20)에서만 터지는 "로컬 OK / Vercel 500" 패턴. 시크릿 창에서도 500(= Deployment Protection 아님)으로 확인. 로컬 `pnpm start` 의 `/api/inngest` 가 401 이면 코드 정상 = Node 버전 문제로 확정.
   - **함수 리전 고정**: DB가 Supabase `ap-northeast-2`(서울)인데 `vercel.json`이 없어 함수가 기본 리전(미국)에서 실행 → 모든 쿼리 크로스리전 왕복으로 페이지 지연. [vercel.json](../vercel.json) `{"regions":["icn1"]}` 추가로 서울 고정.
   - **jsdom 제거 → linkedom**: 배포 후 `/api/inngest` 가 `ERR_REQUIRE_ESM` 으로 크래시(Inngest Sync "could not reach URL"). 원인은 jsdom 의 transitive `html-encoding-sniffer@6`(ESM-only)를 `serverExternalPackages` externalize 경로가 `require()` 로 로드 시도. [html.ts](../src/lib/crawler/html.ts) 의 Readability DOM 공급을 `jsdom` `new JSDOM` → `linkedom` `parseHTML` 로 교체(`extractHtml` 의 `url` 인자 제거, 호출부 [functions.ts](../src/inngest/functions.ts) 갱신), [next.config.ts](../next.config.ts) `serverExternalPackages` 에서 `jsdom` 제거(→`["pdf-parse"]`). cheerio 는 DOM 스펙이 아니라 Readability 대체 불가라 linkedom 선택. lint·build·런타임 추출 스모크 PASS. CLAUDE.md §8 함정 갱신.
   - **배포 환경변수 점검**(별도): `NEXT_PUBLIC_APP_URL`(프로덕션 URL), `INNGEST_EVENT_KEY/SIGNING_KEY`(실값), `INNGEST_DEV` 미설정, `AUTH_TRUST_HOST=true` 권장, Vercel Deployment Protection 끄기(Inngest 도달성), maxDuration=300 은 Pro 플랜 필요.

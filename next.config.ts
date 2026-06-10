@@ -2,7 +2,7 @@ import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["pdf-parse", "jsdom"],
+  serverExternalPackages: ["pdf-parse"],
 };
 
 export default withSentryConfig(nextConfig, {

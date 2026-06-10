@@ -1,6 +1,6 @@
 import { fetch } from "undici";
 import * as cheerio from "cheerio";
-import { JSDOM } from "jsdom";
+import { parseHTML } from "linkedom";
 import { Readability } from "@mozilla/readability";
 import type { ExtractResult } from "./types";
 
@@ -29,9 +29,12 @@ export async function fetchHtml(url: string): Promise<{
   return { status: res.status, contentType, body, finalUrl: res.url };
 }
 
-export function extractHtml(html: string, url: string): ExtractResult {
-  const dom = new JSDOM(html, { url });
-  const article = new Readability(dom.window.document).parse();
+export function extractHtml(html: string): ExtractResult {
+  // jsdom 대신 linkedom: jsdom 의 의존성(html-encoding-sniffer@6)이 ESM-only 라
+  // Vercel 런타임의 require() 외부 모듈 로드에서 ERR_REQUIRE_ESM 으로 죽었다(CLAUDE.md §8).
+  // linkedom 은 Readability 가 요구하는 DOM document 를 제공하면서 번들/serverless 친화적.
+  const { document } = parseHTML(html);
+  const article = new Readability(document as unknown as Document).parse();
 
   if (article?.textContent && article.textContent.trim().length > 0) {
     return {

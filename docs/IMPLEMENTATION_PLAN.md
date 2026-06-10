@@ -982,6 +982,12 @@ SENTRY_DSN=
 
 ## 16. 결정 로그
 
+- **Vercel 배포 대응 — 리전 고정 + jsdom→linkedom** (2026-06-10):
+  - **함수 리전 고정**: DB가 Supabase `ap-northeast-2`(서울)인데 `vercel.json`이 없어 함수가 기본 리전(미국)에서 실행 → 모든 쿼리 크로스리전 왕복으로 페이지 지연. [vercel.json](../vercel.json) `{"regions":["icn1"]}` 추가로 서울 고정.
+  - **jsdom 제거 → linkedom**: 배포 후 `/api/inngest` 가 `ERR_REQUIRE_ESM` 으로 크래시(Inngest Sync "could not reach URL"). 원인은 jsdom 의 transitive `html-encoding-sniffer@6`(ESM-only)를 `serverExternalPackages` externalize 경로가 `require()` 로 로드 시도. [html.ts](../src/lib/crawler/html.ts) 의 Readability DOM 공급을 `jsdom` `new JSDOM` → `linkedom` `parseHTML` 로 교체(`extractHtml` 의 `url` 인자 제거, 호출부 [functions.ts](../src/inngest/functions.ts) 갱신), [next.config.ts](../next.config.ts) `serverExternalPackages` 에서 `jsdom` 제거(→`["pdf-parse"]`). cheerio 는 DOM 스펙이 아니라 Readability 대체 불가라 linkedom 선택. lint·build·런타임 추출 스모크 PASS. CLAUDE.md §8 함정 갱신.
+  - **배포 환경변수 점검**(별도): `NEXT_PUBLIC_APP_URL`(프로덕션 URL), `INNGEST_EVENT_KEY/SIGNING_KEY`(실값), `INNGEST_DEV` 미설정, `AUTH_TRUST_HOST=true` 권장, Vercel Deployment Protection 끄기(Inngest 도달성), maxDuration=300 은 Pro 플랜 필요.
+
+
 - **보안레벨 후속 폴리시 — 제목색·cover 보안칩·단계 라벨** (2026-06-10):
   - 인터뷰 진행칩 마지막 단계 라벨 "분량"→**"분량 및 보안 레벨"**([machine.ts](../src/lib/interview/machine.ts) `STEP_LABELS.length`). [ProgressTrack](../src/components/chat/ProgressTrack.tsx)은 `flex-1`+`whitespace-nowrap`이라 셀 폭(~120px) 내 들어감.
   - **슬라이드 제목 텍스트 색 `#0060A9`**: 신규 토큰 `color.title`([tokens.ppt.json](../src/design/tokens.ppt.json)) 도입(브랜드 accent.penta 와 같은 값이지만 제목 의미로 분리). 7개 `role:'title'`(cover/agenda/section/bullets/twoCol/metric/image)의 `color: C.ink`→`C.title`([layouts.ts](../src/lib/ppt/layouts.ts)). cta 는 `role:'headline'`(가운데 마무리 문구)이라 제외. 미리보기·pptx 는 `boxStyle`/`textOpts`가 style.color 를 그대로 읽어 자동 반영.

@@ -140,7 +140,7 @@ export async function dispatchParse(row: SourceRow): Promise<ExtractResult> {
     }
     if (ct.startsWith("text/") || ct.includes("xml")) {
       const html = decodeHtml(fetched.body, fetched.contentType);
-      return extractHtml(html, fetched.finalUrl);
+      return extractHtml(html);
     }
     throw new Error(`unsupported content-type for URL source: ${ct}`);
   }

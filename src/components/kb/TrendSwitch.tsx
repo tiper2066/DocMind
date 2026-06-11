@@ -63,8 +63,9 @@ export function TrendSwitch({ initialEnabled }: { initialEnabled: boolean }) {
   };
 
   return (
-    <div className="flex shrink-0 items-center gap-3">
-      <span className="text-sm font-medium text-ink">
+    // 모바일: 스위치 위·문구 아래 세로 스택(타이틀 줄바꿈 방지), sm 이상: 한 줄.
+    <div className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+      <span className="order-2 whitespace-nowrap text-sm font-medium text-ink sm:order-1">
         최신 지식 및 동향 검색
       </span>
       <button
@@ -75,7 +76,7 @@ export function TrendSwitch({ initialEnabled }: { initialEnabled: boolean }) {
         disabled={pending}
         onClick={toggle}
         className={cn(
-          "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors disabled:opacity-60",
+          "relative order-1 inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors disabled:opacity-60 sm:order-2",
           enabled
             ? "border-transparent bg-primary"
             : "border-hairline-strong bg-canvas",

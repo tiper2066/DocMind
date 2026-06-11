@@ -10,7 +10,14 @@ import { approveAllPending } from "@/lib/approve-client";
 
 export type PendingItem = { id: string; title: string; version: number | null };
 
-export function PublishAllBar({ items }: { items: PendingItem[] }) {
+export function PublishAllBar({
+  items,
+  canAct = true,
+}: {
+  items: PendingItem[];
+  // false 면 버튼은 보이되 비활성(발표자 전용) — 서버(API 403)가 실제 방어선.
+  canAct?: boolean;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -51,10 +58,11 @@ export function PublishAllBar({ items }: { items: PendingItem[] }) {
           <Button
             size="sm"
             onClick={approveAll}
-            disabled={pending}
-            className="bg-white text-link-blue hover:bg-white/90"
+            disabled={pending || !canAct}
+            title={canAct ? undefined : "데모 버전이므로 발표자만 사용 가능합니다."}
+            className="bg-white text-link-blue hover:bg-white/90 disabled:opacity-70"
           >
-            {pending ? "승인 중…" : "전체 발행 승인"}
+            {pending ? "승인 중…" : canAct ? "전체 발행 승인" : "발표자 전용"}
           </Button>
         </div>
       </div>

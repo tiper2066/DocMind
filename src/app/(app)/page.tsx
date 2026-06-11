@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { db } from '@/db/client';
 import { agents, agentRuns, approvals, documents } from '@/db/schema';
 import { getWorkspaceContext } from '@/lib/rbac';
+import { canUseApprovalActions } from '@/lib/trend-admin';
 import {
     PublishAllBar,
     type PendingItem,
@@ -39,6 +40,9 @@ async function getPendingApprovals(): Promise<PendingItem[]> {
 
 export default async function HomePage() {
     const pending = await getPendingApprovals();
+    // 데모 보호: 화이트리스트 외 사용자는 전체 발행 승인 비활성 (서버 403 과 한 쌍).
+    const ctx = await getWorkspaceContext();
+    const actionsAllowed = ctx ? await canUseApprovalActions(ctx.userId) : false;
     return (
         <main className='mx-auto max-w-6xl px-6 py-8 pb-28'>
             <div className='mb-12 flex flex-col gap-3'>
@@ -75,7 +79,7 @@ export default async function HomePage() {
                 </div>
             </Card>
 
-            <PublishAllBar items={pending} />
+            <PublishAllBar items={pending} canAct={actionsAllowed} />
         </main>
     );
 }

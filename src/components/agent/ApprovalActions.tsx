@@ -5,7 +5,22 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
-export function ApprovalActions({ approvalId }: { approvalId: string }) {
+export type ApproveResult = {
+  notify?: { slack?: string; email?: string } | null;
+  resumed?: boolean;
+};
+
+export function ApprovalActions({
+  approvalId,
+  onApproved,
+  canAct = true,
+}: {
+  approvalId: string;
+  // 지정 시 승인 성공 후 기본 토스트/refresh 를 생략하고 부모가 연출을 이어받는다.
+  onApproved?: (body: ApproveResult) => void;
+  // false 면 버튼은 보이되 비활성(발표자 전용) — 서버(API 403)가 실제 방어선.
+  canAct?: boolean;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -20,6 +35,10 @@ export function ApprovalActions({ approvalId }: { approvalId: string }) {
         const body = await res.json().catch(() => ({}));
         if (!res.ok) {
           throw new Error(body?.error ?? `HTTP ${res.status}`);
+        }
+        if (decision === "approve" && onApproved) {
+          onApproved(body as ApproveResult);
+          return;
         }
         if (decision === "approve") {
           if (body?.resumed) {
@@ -49,19 +68,33 @@ export function ApprovalActions({ approvalId }: { approvalId: string }) {
   };
 
   return (
-    <div className="flex gap-2">
-      <Button size="sm" disabled={pending} onClick={() => decide("approve")}>
-        발행 승인
-      </Button>
-      <Button
-        size="sm"
-        variant="outline"
-        disabled={pending}
-        className="text-destructive hover:text-destructive"
-        onClick={() => decide("reject")}
-      >
-        승인 거부
-      </Button>
+    <div
+      className="flex flex-col items-end gap-1.5"
+      title={canAct ? undefined : "데모 버전이므로 발표자만 사용 가능합니다."}
+    >
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          disabled={pending || !canAct}
+          onClick={() => decide("approve")}
+        >
+          발행 승인
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={pending || !canAct}
+          className="text-destructive hover:text-destructive"
+          onClick={() => decide("reject")}
+        >
+          승인 거부
+        </Button>
+      </div>
+      {!canAct && (
+        <p className="text-xs text-muted-foreground">
+          데모 버전이므로 발표자만 사용 가능합니다.
+        </p>
+      )}
     </div>
   );
 }

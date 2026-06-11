@@ -12,6 +12,7 @@ import {
   sources,
 } from "@/db/schema";
 import { getWorkspaceContext } from "@/lib/rbac";
+import { canUseApprovalActions } from "@/lib/trend-admin";
 import { ensureMonitorAgent } from "@/lib/agent/events";
 import type { AgentEventMessage } from "@/lib/sse";
 import { DetectButton } from "@/components/agent/DetectButton";
@@ -48,6 +49,8 @@ export default async function AgentPage({
   const { approval: highlightId } = await searchParams;
 
   const monitorAgentId = await ensureMonitorAgent(ctx.workspaceId);
+  // 데모 보호: 화이트리스트 외 사용자는 승인/거부/지금감지 버튼 비활성 (서버 403 과 한 쌍).
+  const actionsAllowed = await canUseApprovalActions(ctx.userId);
 
   // 우측 상태(감지/발행): monitor 에이전트 상태·autoRun.
   const agentRows = await db
@@ -119,8 +122,31 @@ export default async function AgentPage({
   }
 
 
-  // 대기 런의 이벤트 백로그(피드/루프 초기값). 라이브는 클라 SSE 가 이어받음.
-  const pendingRunIds = [...new Set(pendingRows.map((p) => p.runId))];
+  // 화면에 보이는 버전들의 "생성 run" 매핑 (결정된 승인 포함) — 펼침 카드의 활동 피드용.
+  const versionIdSet = new Set(versionRows.map((v) => v.id));
+  const recentApprovals = await db
+    .select({ runId: approvals.runId, payload: approvals.payload })
+    .from(approvals)
+    .innerJoin(agentRuns, eq(agentRuns.id, approvals.runId))
+    .innerJoin(agents, eq(agents.id, agentRuns.agentId))
+    .where(eq(agents.workspaceId, ctx.workspaceId))
+    .orderBy(desc(approvals.createdAt))
+    .limit(300);
+  const runByVersion = new Map<string, string>();
+  for (const a of recentApprovals) {
+    const vid = (a.payload as { versionId?: string })?.versionId;
+    if (vid && versionIdSet.has(vid) && !runByVersion.has(vid)) {
+      runByVersion.set(vid, a.runId);
+    }
+  }
+
+  // 대기 + 이력 run 의 이벤트 백로그(피드/루프 초기값). 라이브는 클라 SSE 가 이어받음.
+  const pendingRunIds = [
+    ...new Set([
+      ...pendingRows.map((p) => p.runId),
+      ...runByVersion.values(),
+    ]),
+  ];
   const initialEventsByRun: Record<string, AgentEventMessage[]> = {};
   if (pendingRunIds.length > 0) {
     const evs = await db
@@ -135,7 +161,7 @@ export default async function AgentPage({
       .from(agentEvents)
       .where(inArray(agentEvents.runId, pendingRunIds))
       .orderBy(asc(agentEvents.ts))
-      .limit(300);
+      .limit(600);
     for (const e of evs) {
       (initialEventsByRun[e.runId] ??= []).push({
         id: e.id,
@@ -163,6 +189,7 @@ export default async function AgentPage({
       version: v.version,
       status: v.status,
       pending: pendingByVersion.get(v.id) ?? null,
+      runId: runByVersion.get(v.id) ?? pendingByVersion.get(v.id)?.runId ?? null,
       dateLabel: v.createdAt.toLocaleDateString("ko-KR"),
     });
   }
@@ -224,7 +251,7 @@ export default async function AgentPage({
           </p>
         </div>
         <div className="shrink-0">
-          <DetectButton agentId={monitorAgentId} />
+          <DetectButton agentId={monitorAgentId} canAct={actionsAllowed} />
         </div>
       </div>
 
@@ -258,6 +285,7 @@ export default async function AgentPage({
             documents={documentGroups}
             initialEventsByRun={initialEventsByRun}
             highlightApprovalId={highlightId}
+            actionsAllowed={actionsAllowed}
           />
         </div>
 
@@ -292,7 +320,7 @@ export default async function AgentPage({
             </div>
           </div>
 
-          <BulkApproveCard items={bulkItems} />
+          <BulkApproveCard items={bulkItems} canAct={actionsAllowed} />
         </aside>
       </div>
     </main>

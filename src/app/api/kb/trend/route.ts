@@ -6,6 +6,7 @@ import { db } from "@/db/client";
 import { agents } from "@/db/schema";
 import { inngest } from "@/inngest/client";
 import { getWorkspaceContext } from "@/lib/rbac";
+import { canToggleTrend } from "@/lib/trend-admin";
 
 export const runtime = "nodejs";
 
@@ -19,6 +20,10 @@ export async function PATCH(req: Request) {
   const ctx = await getWorkspaceContext();
   if (!ctx) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  // UI 우회(직접 API 호출) 차단 — 화이트리스트 미포함 사용자는 403.
+  if (!(await canToggleTrend(ctx.userId))) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
   const json = await req.json().catch(() => null);

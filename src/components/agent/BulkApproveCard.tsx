@@ -8,7 +8,13 @@ import { approveAllPending } from "@/lib/approve-client";
 
 export type BulkPendingItem = { id: string; title: string; version: number | null };
 
-export function BulkApproveCard({ items }: { items: BulkPendingItem[] }) {
+export function BulkApproveCard({
+  items,
+  canAct = true,
+}: {
+  items: BulkPendingItem[];
+  canAct?: boolean;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -35,11 +41,17 @@ export function BulkApproveCard({ items }: { items: BulkPendingItem[] }) {
       <Button
         size="sm"
         onClick={approveAll}
-        disabled={pending}
-        className="mt-4 w-full bg-white text-link-blue hover:bg-white/90"
+        disabled={pending || !canAct}
+        title={canAct ? undefined : "데모 버전이므로 발표자만 사용 가능합니다."}
+        className="mt-4 w-full bg-white text-link-blue hover:bg-white/90 disabled:opacity-70"
       >
         {pending ? "승인 중…" : "전체 발행 승인"}
       </Button>
+      {!canAct && (
+        <p className="mt-2 text-center text-xs text-on-primary/80">
+          데모 버전이므로 발표자만 사용 가능합니다.
+        </p>
+      )}
     </div>
   );
 }

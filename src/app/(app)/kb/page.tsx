@@ -5,6 +5,7 @@ import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { agents, sources, sourceChunks } from "@/db/schema";
 import { getWorkspaceContext } from "@/lib/rbac";
+import { canToggleTrend } from "@/lib/trend-admin";
 import {
   Sheet,
   SheetTrigger,
@@ -114,6 +115,7 @@ export default async function KbPage({
     )
     .limit(1);
   const trendEnabled = trendAgent?.autoRun ?? false;
+  const trendToggleAllowed = await canToggleTrend(ctx.userId);
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-8">
@@ -124,7 +126,10 @@ export default async function KbPage({
             사내 URL · 파일을 등록하면 AI 가 학습합니다.
           </p>
         </div>
-        <TrendSwitch initialEnabled={trendEnabled} />
+        <TrendSwitch
+          initialEnabled={trendEnabled}
+          canToggle={trendToggleAllowed}
+        />
       </div>
 
       <KbFolderTabs>

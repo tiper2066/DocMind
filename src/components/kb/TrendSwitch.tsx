@@ -10,7 +10,14 @@ import { cn } from "@/lib/utils";
 const REFRESH_MS = 8000;
 const REFRESH_TOTAL_MS = 2 * 60 * 1000;
 
-export function TrendSwitch({ initialEnabled }: { initialEnabled: boolean }) {
+export function TrendSwitch({
+  initialEnabled,
+  canToggle = true,
+}: {
+  initialEnabled: boolean;
+  // false 면 스위치는 보이되 비활성(관리자 전용) — 서버(API 403)가 실제 방어선.
+  canToggle?: boolean;
+}) {
   const router = useRouter();
   const [enabled, setEnabled] = useState(initialEnabled);
   const [pending, setPending] = useState(false);
@@ -62,10 +69,19 @@ export function TrendSwitch({ initialEnabled }: { initialEnabled: boolean }) {
     }
   };
 
+  const disabled = pending || !canToggle;
+
   return (
     // 모바일: 스위치 위·문구 아래 세로 스택(타이틀 줄바꿈 방지), sm 이상: 한 줄.
-    <div className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:gap-3">
-      <span className="order-2 whitespace-nowrap text-sm font-medium text-ink sm:order-1">
+    <div
+      className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:gap-3"
+      title={canToggle ? undefined : "관리자만 변경할 수 있습니다"}
+    >
+      <span
+        className={`order-2 whitespace-nowrap text-sm font-medium sm:order-1 ${
+          canToggle ? "text-ink" : "text-steel"
+        }`}
+      >
         최신 지식 및 동향 검색
       </span>
       <button
@@ -73,10 +89,12 @@ export function TrendSwitch({ initialEnabled }: { initialEnabled: boolean }) {
         role="switch"
         aria-checked={enabled}
         aria-label="최신 지식 및 동향 검색"
-        disabled={pending}
+        aria-disabled={!canToggle || undefined}
+        disabled={disabled}
         onClick={toggle}
         className={cn(
           "relative order-1 inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors disabled:opacity-60 sm:order-2",
+          !canToggle && "cursor-not-allowed",
           enabled
             ? "border-transparent bg-primary"
             : "border-hairline-strong bg-canvas",

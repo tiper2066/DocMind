@@ -72,11 +72,12 @@ export function TrendSwitch({
   const disabled = pending || !canToggle;
 
   return (
-    // 모바일: 스위치 위·문구 아래 세로 스택(타이틀 줄바꿈 방지), sm 이상: 한 줄.
-    <div
-      className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:gap-3"
-      title={canToggle ? undefined : "관리자만 변경할 수 있습니다"}
-    >
+    <div className="flex min-w-0 flex-col items-end gap-1.5">
+      {/* 모바일: 스위치 위·문구 아래 세로 스택(타이틀 줄바꿈 방지), sm 이상: 한 줄. */}
+      <div
+        className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:gap-3"
+        title={canToggle ? undefined : "관리자만 변경할 수 있습니다"}
+      >
       <span
         className={`order-2 whitespace-nowrap text-sm font-medium sm:order-1 ${
           canToggle ? "text-ink" : "text-steel"
@@ -106,7 +107,11 @@ export function TrendSwitch({
             enabled ? "translate-x-6 bg-on-primary" : "translate-x-1 bg-steel",
           )}
         />
-      </button>
+        </button>
+      </div>
+      <p className="max-w-55 text-right text-xs leading-snug break-keep text-destructive sm:max-w-none">
+        최신 동향을 반영하지만, 일부 부정확한 정보가 포함될 수 있습니다.
+      </p>
     </div>
   );
 }

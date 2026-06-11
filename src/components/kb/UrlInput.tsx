@@ -42,7 +42,7 @@ export function UrlInput() {
         type="url"
         value={url}
         onChange={(e) => setUrl(e.target.value)}
-        placeholder="https://pentasecurity.com/products/wapples"
+        placeholder="URL을 등록하세요"
         disabled={pending}
         autoComplete="off"
         className="bg-canvas"

@@ -59,7 +59,8 @@ KB 소스 변경 (URL 내용 변경 or 파일 교체)
 
 - URL 등록: 크롤링 → 본문 추출 → 청크 → 임베딩 → `ready`
 - 파일 업로드: PDF / PPTX / DOCX / XLSX → 텍스트 추출 → 동일 파이프라인
-- 소스 수정(내용 교체)·삭제, 수동 "지금 감지" 트리거 지원
+- 소스 수정(내용 교체)·삭제, 수동 "지금 감지" 트리거, 카드/상세에서 원문 페이지 열기
+- **최신 지식 및 동향 자동 수집**: 스위치 ON 동안 AI 가 KB 주제를 기반으로 웹을 검색(Anthropic web search 도구)해 관련 최신 자료를 자동 등록. 켜는 즉시 1회 + 매일 현지 0시·12시(워크스페이스별 시간대) 자동 실행. 크롤 성공분만 등록(실패 카드 없음, 회당 최대 20건), 30일 자동 정리, 별도 탭에 카드로 표시
 
 ---
 
@@ -140,8 +141,8 @@ flowchart TB
 |---|---|---|
 | **Vercel** | Next.js 호스팅 (서버리스 함수) | Node 22 고정, 리전 `icn1`(서울). 서버리스 비호환 라이브러리는 대체 적용(jsdom→linkedom, pdf-parse→unpdf) |
 | **Supabase** | Postgres(+pgvector) · Storage 2버킷(소스 원본 / pptx 캐시) | 앱 런타임은 pooler URL + `prepare:false`. Storage 키는 서버에서 `${workspaceId}/${ulid()}/${safeName}` 강제 |
-| **Inngest Cloud** | 백그라운드 잡 (크롤, 에이전트 5단계, 스케줄 생성) | Vercel 통합으로 배포 시 자동 sync. 함수: `crawl-source`, `agent-detect`(cron `*/30`), `agent-perceive/reason/act/learn`, `agent-generate-scheduled` |
-| **Anthropic Claude API** | 인터뷰 질문 생성, 문서 플랜(`propose_plan`), 슬라이드 채움, diff 분석 | 시스템 프롬프트·KB 컨텍스트에 prompt caching (`cache_control: ephemeral`) |
+| **Inngest Cloud** | 백그라운드 잡 (크롤, 에이전트 5단계, 스케줄 생성, 동향 수집) | Vercel 통합으로 배포 시 자동 sync. 함수: `crawl-source`, `agent-detect`(cron `*/30`), `agent-perceive/reason/act/learn`, `agent-generate-scheduled`, `trend-scan`(매시 cron + 시간대 게이트) |
+| **Anthropic Claude API** | 인터뷰 질문 생성, 문서 플랜(`propose_plan`), 슬라이드 채움, diff 분석, **웹 검색**(최신 동향 수집 — web search 서버 도구) | 시스템 프롬프트·KB 컨텍스트에 prompt caching (`cache_control: ephemeral`) |
 | **Voyage AI** | 쿼리·청크 임베딩 (voyage-3, 1024차원) | 무료 티어 3 RPM 주의 — 앱이 쿼리 캐시(LRU 256) + 배치 호출로 생성당 호출 17→4회 절감 |
 | **Slack Web API** | 발행 승인 알림 (#docmind-demo) | 승인 시점에만 발송, 버튼 링크는 `NEXT_PUBLIC_APP_URL` 기반 |
 | **Resend** | 발행 알림 이메일 (워크스페이스 멤버) | Slack 과 동일한 승인 후 발송 |

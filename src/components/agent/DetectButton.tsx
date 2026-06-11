@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { PresenterLockTooltip } from "@/components/PresenterLockTooltip";
 
 export function DetectButton({
   agentId,
@@ -38,11 +39,10 @@ export function DetectButton({
   };
 
   return (
-    // disabled 요소는 hover 이벤트가 안 떠서 툴팁은 래퍼 span 에 단다.
-    <span title={canAct ? undefined : "데모 버전이므로 발표자만 사용 가능합니다."}>
+    <PresenterLockTooltip locked={!canAct}>
       <Button onClick={trigger} disabled={pending || !canAct}>
         {pending ? "감지 중..." : "지금 감지"}
       </Button>
-    </span>
+    </PresenterLockTooltip>
   );
 }

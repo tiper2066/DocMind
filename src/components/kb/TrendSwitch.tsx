@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
+import { PresenterLockTooltip } from "@/components/PresenterLockTooltip";
 
 // ON 직후 수집 결과가 카드로 나타나도록 잠시 주기 새로고침 (SSE 없는 화면의 데모 보조).
 const REFRESH_MS = 8000;
@@ -74,10 +75,7 @@ export function TrendSwitch({
   return (
     <div className="flex min-w-0 flex-col items-end gap-1.5">
       {/* 모바일: 스위치 위·문구 아래 세로 스택(타이틀 줄바꿈 방지), sm 이상: 한 줄. */}
-      <div
-        className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:gap-3"
-        title={canToggle ? undefined : "관리자만 변경할 수 있습니다"}
-      >
+      <div className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:gap-3">
       <span
         className={`order-2 whitespace-nowrap text-sm font-medium sm:order-1 ${
           canToggle ? "text-ink" : "text-steel"
@@ -85,6 +83,10 @@ export function TrendSwitch({
       >
         최신 지식 및 동향 검색
       </span>
+      <PresenterLockTooltip
+        locked={!canToggle}
+        className="order-1 inline-flex shrink-0 sm:order-2"
+      >
       <button
         type="button"
         role="switch"
@@ -95,7 +97,7 @@ export function TrendSwitch({
         onClick={toggle}
         className={cn(
           "relative order-1 inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors disabled:opacity-60 sm:order-2",
-          !canToggle && "cursor-not-allowed",
+          !canToggle && "pointer-events-none",
           enabled
             ? "border-transparent bg-primary"
             : "border-hairline-strong bg-canvas",
@@ -108,6 +110,7 @@ export function TrendSwitch({
           )}
         />
         </button>
+      </PresenterLockTooltip>
       </div>
       <p className="max-w-55 text-right text-xs leading-snug break-keep text-destructive sm:max-w-none">
         최신 동향을 반영하지만, 일부 부정확한 정보가 포함될 수 있습니다.

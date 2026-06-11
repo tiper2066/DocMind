@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { approveAllPending } from "@/lib/approve-client";
+import { PresenterLockTooltip } from "@/components/PresenterLockTooltip";
 
 export type PendingItem = { id: string; title: string; version: number | null };
 
@@ -55,15 +56,16 @@ export function PublishAllBar({
           >
             자세히 보기
           </Link>
-          <Button
-            size="sm"
-            onClick={approveAll}
-            disabled={pending || !canAct}
-            title={canAct ? undefined : "데모 버전이므로 발표자만 사용 가능합니다."}
-            className="bg-white text-link-blue hover:bg-white/90 disabled:opacity-70"
-          >
-            {pending ? "승인 중…" : canAct ? "전체 발행 승인" : "발표자 전용"}
-          </Button>
+          <PresenterLockTooltip locked={!canAct} className="inline-flex">
+            <Button
+              size="sm"
+              onClick={approveAll}
+              disabled={pending || !canAct}
+              className="bg-white text-link-blue hover:bg-white/90 disabled:opacity-70"
+            >
+              {pending ? "승인 중…" : canAct ? "전체 발행 승인" : "발표자 전용"}
+            </Button>
+          </PresenterLockTooltip>
         </div>
       </div>
     </div>

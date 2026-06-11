@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { approveAllPending } from "@/lib/approve-client";
+import { PresenterLockTooltip } from "@/components/PresenterLockTooltip";
 
 export type BulkPendingItem = { id: string; title: string; version: number | null };
 
@@ -38,20 +39,16 @@ export function BulkApproveCard({
   return (
     <div className="rounded-xl bg-link-blue p-5 text-on-primary shadow-elevation-1">
       <p className="text-body-sm font-medium leading-relaxed">{label}</p>
-      <Button
-        size="sm"
-        onClick={approveAll}
-        disabled={pending || !canAct}
-        title={canAct ? undefined : "데모 버전이므로 발표자만 사용 가능합니다."}
-        className="mt-4 w-full bg-white text-link-blue hover:bg-white/90 disabled:opacity-70"
-      >
-        {pending ? "승인 중…" : "전체 발행 승인"}
-      </Button>
-      {!canAct && (
-        <p className="mt-2 text-center text-xs text-on-primary/80">
-          데모 버전이므로 발표자만 사용 가능합니다.
-        </p>
-      )}
+      <PresenterLockTooltip locked={!canAct} className="block">
+        <Button
+          size="sm"
+          onClick={approveAll}
+          disabled={pending || !canAct}
+          className="mt-4 w-full bg-white text-link-blue hover:bg-white/90 disabled:opacity-70"
+        >
+          {pending ? "승인 중…" : "전체 발행 승인"}
+        </Button>
+      </PresenterLockTooltip>
     </div>
   );
 }

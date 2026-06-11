@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { PresenterLockTooltip } from "@/components/PresenterLockTooltip";
 
 export type ApproveResult = {
   notify?: { slack?: string; email?: string } | null;
@@ -68,10 +69,7 @@ export function ApprovalActions({
   };
 
   return (
-    <div
-      className="flex flex-col items-end gap-1.5"
-      title={canAct ? undefined : "데모 버전이므로 발표자만 사용 가능합니다."}
-    >
+    <PresenterLockTooltip locked={!canAct} className="inline-flex">
       <div className="flex gap-2">
         <Button
           size="sm"
@@ -90,11 +88,6 @@ export function ApprovalActions({
           승인 거부
         </Button>
       </div>
-      {!canAct && (
-        <p className="text-xs text-muted-foreground">
-          데모 버전이므로 발표자만 사용 가능합니다.
-        </p>
-      )}
-    </div>
+    </PresenterLockTooltip>
   );
 }

@@ -938,9 +938,11 @@ SENTRY_DSN=
 
 ---
 
-### Phase 9 — 데모 준비 & 최종 검증 ⬜
+### Phase 9 — 데모 준비 & 최종 검증 🟡
 
 > **산출물**: 라이브 데모 2개 시나리오가 무중단으로 완주.
+>
+> **2026-06-11 개발 작업 마무리** — 코드 산출물은 전부 완료·배포됨(`penta-mind5.vercel.app`). 아래 미체크 항목(리허설·녹화·감사 등)은 **배포 사이트에서 직접 기능을 실행하며 진행**하기로 함(데모팀 라이브 검증 단계).
 
 **시드 & 스크립트**
 
@@ -952,7 +954,7 @@ SENTRY_DSN=
 
 - [x] [src/app/demo/playback/page.tsx](../src/app/demo/playback/page.tsx) — 백업 녹화 영상 재생(`/demo/playback`). `public/demo/demo-a.mp4`·`demo-b.mp4` 있으면 자동 플레이어, 없으면 배치 안내. **mp4 파일은 리허설 녹화 후 배치 필요**.
 - [ ] 발표 PC에서 Chrome 단독 프로필 생성 (확장 프로그램 X)
-- [ ] 데모 환경변수 분리(`SLACK_DEFAULT_CHANNEL_ID=#docmind-demo` 고정)
+- [x] 데모 환경변수 분리(`SLACK_DEFAULT_CHANNEL_ID=#docmind-demo` 고정) — Vercel Production env 설정 확인(2026-06-11)
 
 **리허설 통과 기준 (계획서 11장 7항목)**
 
@@ -976,7 +978,7 @@ SENTRY_DSN=
 - [ ] Sentry 알람 룰 (P0: `/api/interview/*`, `/api/generate/*` 5xx)
 - [x] 콜드 쿼리 워밍 ([`scripts/warmup.ts`](../scripts/warmup.ts), `pnpm warmup`) — DB·Anthropic·Voyage·Inngest 4종 핑, 발표 ~10분 전 1회 실행
 - [ ] **WCAG AA 색 대비 정량 감사**(Lighthouse/axe) — Phase 8 에서 이월된 접근성 검증
-- [ ] Vercel deployment alias 고정 (`docmind-demo.vercel.app`)
+- [x] Vercel deployment alias 고정 — 실제 도메인 `penta-mind5.vercel.app` 으로 확정·운영 중
 
 ---
 

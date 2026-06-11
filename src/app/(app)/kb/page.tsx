@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
-import { desc, eq, sql } from "drizzle-orm";
+import { ExternalLink } from "lucide-react";
+import { and, desc, eq, sql } from "drizzle-orm";
 
 import { db } from "@/db/client";
-import { sources, sourceChunks } from "@/db/schema";
+import { agents, sources, sourceChunks } from "@/db/schema";
 import { getWorkspaceContext } from "@/lib/rbac";
 import {
   Sheet,
@@ -16,21 +17,63 @@ import { SourceActions } from "@/components/kb/SourceActions";
 import { UrlInput } from "@/components/kb/UrlInput";
 import { DropZone } from "@/components/kb/DropZone";
 import { KbAutoRefresh } from "@/components/kb/KbAutoRefresh";
+import { TrendSwitch } from "@/components/kb/TrendSwitch";
+import {
+  SourcePagination,
+  type KbTab,
+} from "@/components/kb/SourcePagination";
 
 type Source = typeof sources.$inferSelect;
 type SourceWithCount = Source & { chunkCount: number };
 
 export const dynamic = "force-dynamic";
 
-export default async function KbPage() {
+const PAGE_SIZE = 12;
+
+function parsePage(raw: string | undefined): number {
+  const n = Number(raw);
+  return Number.isInteger(n) && n > 0 ? n : 1;
+}
+
+function paginate<T>(items: T[], page: number) {
+  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const current = Math.min(page, totalPages);
+  return {
+    items: items.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE),
+    page: current,
+    totalPages,
+  };
+}
+
+export default async function KbPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    tab?: string;
+    p_url?: string;
+    p_file?: string;
+    p_trend?: string;
+  }>;
+}) {
   const ctx = await getWorkspaceContext();
   if (!ctx) redirect("/login");
+
+  const sp = await searchParams;
+  const activeTab: KbTab = ["url", "file", "trend"].includes(sp.tab ?? "")
+    ? (sp.tab as KbTab)
+    : "url";
+  const pages: Record<KbTab, number> = {
+    url: parsePage(sp.p_url),
+    file: parsePage(sp.p_file),
+    trend: parsePage(sp.p_trend),
+  };
 
   const rows = await db
     .select({
       id: sources.id,
       workspaceId: sources.workspaceId,
       kind: sources.kind,
+      origin: sources.origin,
       url: sources.url,
       fileKey: sources.fileKey,
       title: sources.title,
@@ -48,34 +91,94 @@ export default async function KbPage() {
     .where(eq(sources.workspaceId, ctx.workspaceId))
     .orderBy(desc(sources.createdAt));
 
-  const urlSources = rows.filter((s) => s.kind === "url");
-  const fileSources = rows.filter((s) => s.kind === "file");
+  const urlAll = rows.filter((s) => s.kind === "url" && s.origin !== "trend");
+  const fileAll = rows.filter((s) => s.kind === "file");
+  // trend 소스는 성공분만 insert 되므로 항상 ready — 실패 카드가 존재하지 않는다.
+  const trendAll = rows.filter((s) => s.origin === "trend");
   const anyCrawling = rows.some((s) => s.status === "crawling");
+
+  const urlPg = paginate(urlAll, pages.url);
+  const filePg = paginate(fileAll, pages.file);
+  const trendPg = paginate(trendAll, pages.trend);
+  const clampedPages: Record<KbTab, number> = {
+    url: urlPg.page,
+    file: filePg.page,
+    trend: trendPg.page,
+  };
+
+  const [trendAgent] = await db
+    .select({ autoRun: agents.autoRun })
+    .from(agents)
+    .where(
+      and(eq(agents.workspaceId, ctx.workspaceId), eq(agents.kind, "trend")),
+    )
+    .limit(1);
+  const trendEnabled = trendAgent?.autoRun ?? false;
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-8">
-      <div className="mb-8 flex flex-col gap-1">
-        <h1 className="font-heading text-heading-3 text-ink">지식 베이스</h1>
-        <p className="text-body-sm text-steel">
-          사내 URL · 파일을 등록하면 AI 가 학습합니다.
-        </p>
+      <div className="mb-8 flex items-start justify-between gap-6">
+        <div className="flex flex-col gap-1">
+          <h1 className="font-heading text-heading-3 text-ink">지식 베이스</h1>
+          <p className="text-body-sm text-steel">
+            사내 URL · 파일을 등록하면 AI 가 학습합니다.
+          </p>
+        </div>
+        <TrendSwitch initialEnabled={trendEnabled} />
       </div>
 
       <KbFolderTabs>
-        <Tabs defaultValue="url" className="space-y-6">
+        <Tabs defaultValue={activeTab} className="space-y-6">
           <TabsList variant="chip">
-            <TabsTrigger value="url">URL ({urlSources.length})</TabsTrigger>
-            <TabsTrigger value="file">파일 ({fileSources.length})</TabsTrigger>
+            <TabsTrigger value="url">URL ({urlAll.length})</TabsTrigger>
+            <TabsTrigger value="file">파일 ({fileAll.length})</TabsTrigger>
+            <TabsTrigger value="trend">
+              최신 지식 및 동향 ({trendAll.length})
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="url" className="space-y-6">
             <UrlInput />
-            <SourceGrid sources={urlSources} emptyHint="등록된 URL 이 없습니다." />
+            <SourceGrid sources={urlPg.items} emptyHint="등록된 URL 이 없습니다." />
+            <SourcePagination
+              tab="url"
+              page={urlPg.page}
+              totalPages={urlPg.totalPages}
+              pages={clampedPages}
+            />
           </TabsContent>
 
           <TabsContent value="file" className="space-y-6">
             <DropZone />
-            <SourceGrid sources={fileSources} emptyHint="업로드된 파일이 없습니다." />
+            <SourceGrid sources={filePg.items} emptyHint="업로드된 파일이 없습니다." />
+            <SourcePagination
+              tab="file"
+              page={filePg.page}
+              totalPages={filePg.totalPages}
+              pages={clampedPages}
+            />
+          </TabsContent>
+
+          <TabsContent value="trend" className="space-y-6">
+            <p className="text-body-sm text-steel">
+              스위치가 켜져 있는 동안 AI 가 지식 베이스의 주제를 기반으로 매일
+              12시·24시(워크스페이스 기준시간)에 관련 최신 자료를 자동
+              수집합니다. 켜는 즉시 1회 수집합니다.
+            </p>
+            <SourceGrid
+              sources={trendPg.items}
+              emptyHint={
+                trendEnabled
+                  ? "수집된 자료가 아직 없습니다. 수집에는 수 분이 걸릴 수 있습니다."
+                  : "우측 상단의 '최신 지식 및 동향 검색' 스위치를 켜면 AI 가 관련 최신 자료를 수집합니다."
+              }
+            />
+            <SourcePagination
+              tab="trend"
+              page={trendPg.page}
+              totalPages={trendPg.totalPages}
+              pages={clampedPages}
+            />
           </TabsContent>
         </Tabs>
       </KbFolderTabs>
@@ -117,7 +220,18 @@ function SourceGrid({
             </Sheet>
             {/* 평소 숨김 → hover/포커스 시 카드 정중앙에 액션 표시 + 어두운 스크림. */}
             <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-ink-deep/55 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100">
-              <div className="pointer-events-auto rounded-full bg-surface/95 p-1 shadow-elevation-2 ring-1 ring-hairline backdrop-blur-sm">
+              <div className="pointer-events-auto flex items-center gap-1 rounded-full bg-surface/95 p-1 shadow-elevation-2 ring-1 ring-hairline backdrop-blur-sm">
+                {s.url && (
+                  <a
+                    href={s.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="원문 페이지 열기"
+                    className="inline-flex size-8 items-center justify-center rounded-md bg-canvas text-stone transition-colors hover:bg-brand/10 hover:text-brand"
+                  >
+                    <ExternalLink className="size-4" aria-hidden />
+                  </a>
+                )}
                 <SourceActions sourceId={s.id} title={title} kind={s.kind} />
               </div>
             </div>

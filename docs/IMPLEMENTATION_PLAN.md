@@ -982,6 +982,28 @@ SENTRY_DSN=
 
 ## 16. 결정 로그
 
+- **KB "최신 지식 및 동향" 자동 수집 기능** (2026-06-11):
+  KB 페이지 우측 상단 스위치 ON 동안 AI 가 KB 주제 기반으로 웹을 검색해 관련 최신 URL 을 자동 수집하는 기능. 수집분은 세 번째 탭 "최신 지식 및 동향"에 기존 URL 카드와 동일하게 표시.
+  - **검색**: Anthropic **web search 서버 도구**(`web_search_20250305`, Sonnet) — 별도 검색 벤더 없음. KB 주제(origin='user' ready 소스의 title/tags/summary) → 검색 → 후보 JSON. `pause_turn` 은 assistant 턴 재전송으로 계속. 프롬프트에 **억지 충원 금지** 명시(관련성 낮으면 적게/빈 배열).
+  - **성공분만 등록**: [trend.ts](../src/inngest/trend.ts) `ingestCandidate` 가 소스 행 생성 **전에** 크롤·추출을 수행, 성공 시에만 insert(origin='trend', status='ready') — 실패 카드가 구조적으로 존재 불가, **maxPerRun(기본 20) 카운트는 성공 수만** 센다. 후보는 캡의 2배(40) 수집, dedup(URL 정규화: 소문자 호스트·해시/utm 제거).
+  - **스케줄**: Inngest `trend-scan` — cron `TZ=Asia/Seoul 0 0,12 * * *`(12시·24시) + `agent/trend.scan.requested` 이벤트. **스위치 ON 시 즉시 1회 발화**([PATCH /api/kb/trend](../src/app/api/kb/trend/route.ts)) — 데모에서 cron 대기 불필요.
+  - **영속화**: `agents(kind='trend')` 행의 `auto_run` = 스위치 상태, `config_json` 으로 maxPerRun/expireDays 오버라이드 가능.
+  - **DB**: `sources.origin`('user' 기본/'trend') 컬럼 — 마이그레이션 0004. 30일 지난 trend 소스 자동 삭제(청크 cascade).
+  - **격리**: trend 소스는 **변경 감지(Mode B) cron 에서 제외**([agent.ts](../src/inngest/agent.ts) origin 필터) — 외부 기사는 자주 바뀌어 승인 큐 노이즈가 되므로. RAG 검색에는 정상 참여(KB 의 일부).
+  - UI: [TrendSwitch](../src/components/kb/TrendSwitch.tsx)(헤더 우측, ON 후 2분간 8초 주기 자동 새로고침), [kb/page](<../src/app/(app)/kb/page.tsx>) trend 탭. lint·build PASS.
+  - **후속(동일자)**: ① 카드 hover 액션·[SourceSheet](../src/components/kb/SourceSheet.tsx)에 **원문 페이지 열기** 외부링크(새 탭). ② **서버 페이지네이션**([SourcePagination](../src/components/kb/SourcePagination.tsx), 12장/페이지, 5개 번호 윈도) — URL/파일/trend 3탭 공통, `?tab=&p_url=&p_file=&p_trend=` 탭별 독립 파라미터(이동 후 활성 탭 유지, 범위 밖 page 는 클램프). ③ **워크스페이스별 시간대**: cron 을 `TZ` 고정 대신 **매시 정각**(`0 * * * *`)으로 바꾸고 핸들러가 `config_json.timezone`(IANA, 기본 Asia/Seoul)의 **현지 시각 0시/12시 게이트**로 필터(`localHour`, 잘못된 tz 는 폴백) — cron/수동 구분은 `event.name === "inngest/scheduled.timer"`. 스위치 ON 즉시 실행은 게이트 미적용.
+  - **디버깅 후기(라이브 검증)**: 첫 실행이 0건 — 원인은 **web search 도구 응답의 JSON 배열이 `max_tokens`(4000)에 잘려** parse 실패(빈 배열). 수정: max_tokens 8000 + 출력에서 reason 필드 제거(토큰 다이어트) + **절단 복구 파서**(마지막 완전한 객체까지 살림, 코드펜스/서두문장도 허용). 교훈: 서버 도구+대량 JSON 출력 조합은 반드시 `stop_reason` 을 의심할 것. 검증: Inngest 경유 run 에서 후보 36건 파싱 → 정확히 20건(maxPerRun) ready 등록, 실패 카드 0.
+
+- **PPT 본문 디자인 품질 일괄 개선 — 수직 리듬·타이포 위계·면(surface)·결정적 오토핏** (2026-06-11):
+  Cover/Back Cover/타이틀/하단바 보존, 본문 5종(bullets·agenda·twoCol·metric·quote) 일괄. 모든 기하·스타일은 [layouts.ts](../src/lib/ppt/layouts.ts)+[tokens.ppt.json](../src/design/tokens.ppt.json) 단일 출처 → [render.tsx](../src/lib/ppt/render.tsx)·[pptx.ts](../src/lib/ppt/pptx.ts) 동시 반영.
+  - **결정적 텍스트 측정 공용화**: `estTextWidth`(전각 1em·반각 0.6em)/`estLines`/`fitTextSize` — pptx 엔 측정 API 가 없어 양 렌더러가 같은 값을 내는 추정식이 유일한 방법. `metricValueSize` 도 이를 사용하게 리팩터.
+  - **수직 중앙 정렬**: `centeredTop(blockH)` (콘텐츠 영역 240~1000). `bulletRowYs`(행 블록)·`agendaRowY(i, count)`(시그니처 변경)·`quoteLayout`·METRIC_PANEL(y450 h320) 적용 — 내용이 적어도 하단이 비어 보이지 않음.
+  - **타이포 위계**: bullets L0 22 medium→**24 bold**(w 1528→**1200** 줄길이 제한, L1 들여쓰기 64px 차), agenda 인덱스 28 회색→**14 bold Penta 블루 eyebrow**(제목이 주인공).
+  - **면(surface)**: 신규 토큰 `color.surface{panel #F7F9FB, panelBorder #E8EBEE, chip #E9F2F9}`. metric 카드 패널(라운드 16), twoCol 좌우 패널+라벨 칩(`twoColChipW` 결정적 폭, 분할선 제거), quote 는 워터마크 따옴표 → **좌측 4px Penta 블루 바**(`quoteLayout` 이 텍스트 높이에 맞춤).
+  - **마커**: bullets L0 ■ 텍스트 prefix → **그리는 12×12 Penta 블루 사각형**(`bulletMarkerBox`) — 크기·정렬·색 독립 제어. L1 은 — prefix 유지.
+  - **오토핏**: twoCol body 24→18, quote 44→32 단계 축소 — 패널/영역 넘침이 구조적으로 불가능.
+  - 검증: 기하 검산 스크립트(최악 11행 bullets top 892+36<1000, agenda 9개 290~970, quote 2줄 중앙) + lint·build PASS.
+
 - **Vercel 배포 대응 — `/api/inngest` 500 (서버리스 Node-비호환 라이브러리) + 리전 + 환경변수** (2026-06-10):
   배포 후 `/api/inngest` 가 500(Inngest Sync "could not reach URL") → 로컬 `next start` 는 401(정상)이라 "로컬 OK / Vercel 500". Vercel **Logs** 의 첫 에러줄을 단서로 두 라이브러리를 serverless 호환 대체로 교체해 해결. (시크릿 창에서도 500 → Deployment Protection 아님 확인.)
   - **jsdom → linkedom**: 1차 크래시. jsdom 의 transitive `html-encoding-sniffer@6`(ESM-only)가 `serverExternalPackages` externalize+`require()` 경로에서 `ERR_REQUIRE_ESM`. [html.ts](../src/lib/crawler/html.ts) Readability DOM 을 `linkedom` `parseHTML` 로(`new Readability(document)`, `extractHtml` url 인자 제거, [functions.ts](../src/inngest/functions.ts) 갱신). cheerio 는 DOM 스펙 아니라 대체 불가.

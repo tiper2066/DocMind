@@ -1,3 +1,5 @@
+import { ExternalLink } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -35,6 +37,17 @@ export function SourceSheet({
       </SheetHeader>
 
       <div className="space-y-5 px-4">
+        {source.url && (
+          <a
+            href={source.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-on-primary transition-opacity hover:opacity-90"
+          >
+            <ExternalLink className="size-4" aria-hidden />
+            원문 페이지 열기
+          </a>
+        )}
         <Row label="상태" value={<StatusValue status={source.status} />} />
         <Row label="종류" value={source.kind === "url" ? "URL" : "파일"} />
         <Row label="청크 수" value={String(chunkCount)} />

@@ -15,6 +15,11 @@ export const AgentDetectRequested = z.object({
   sourceId: z.string().uuid().optional(),
 });
 
+// 최신 지식 및 동향 수집 — 스위치 ON 시 즉시 1회 + cron(12시·24시 KST).
+export const TrendScanRequested = z.object({
+  workspaceId: z.string().uuid().optional(),
+});
+
 // 자율 루프 이벤트 — runId 를 5단계(detect→perceive→reason→act→learn)에 관통.
 export const SourceChanged = z.object({
   workspaceId: z.string().uuid(),

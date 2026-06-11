@@ -183,7 +183,7 @@ const MetadataSchema = z.object({
 
 type MetadataResult = z.infer<typeof MetadataSchema>;
 
-async function generateSourceMetadata(
+export async function generateSourceMetadata(
   text: string,
   hintTitle: string | null,
 ): Promise<MetadataResult> {

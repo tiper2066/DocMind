@@ -86,6 +86,7 @@ export const agentDetect = inngest.createFunction(
           id: sources.id,
           workspaceId: sources.workspaceId,
           kind: sources.kind,
+          origin: sources.origin,
           contentHash: sources.contentHash,
         })
         .from(sources)
@@ -95,7 +96,9 @@ export const agentDetect = inngest.createFunction(
         // 명시적 트리거(소스 "수정" 등 sourceId 지정)면 그 소스만 — 종류 무관(파일 포함).
         // cron 자동 스캔(sourceId 없음)은 외부에서 바뀌는 URL 소스만 재크롤한다.
         if (data.sourceId) return r.id === data.sourceId;
-        return r.kind === "url";
+        // trend(자동 수집) 소스는 외부 기사라 자주 바뀜 — 변경 감지 대상에서 제외해
+        // 승인 큐 노이즈를 막는다 (RAG 검색에는 정상 참여).
+        return r.kind === "url" && r.origin !== "trend";
       });
     });
 

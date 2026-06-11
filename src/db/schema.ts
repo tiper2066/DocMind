@@ -90,6 +90,8 @@ export const sources = pgTable(
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
     kind: text("kind").notNull(),
+    // 출처 구분: user=사용자 등록, trend=AI 자동 수집(최신 지식 및 동향)
+    origin: text("origin").notNull().default("user"),
     url: text("url"),
     fileKey: text("file_key"),
     title: text("title"),

@@ -20,7 +20,7 @@ kind 별 가이드:
 - section: index(=섹션 번호), eyebrow(예: "SECTION 02"), title. **title 에 번호 prefix 금지** — bigIndex 워터마크가 별도로 번호를 표시한다.
 - bullets: title + 2~10개 bullet. level 0 또는 1. L0 가 핵심, L1 은 보조 설명.
 - twoCol: 비교 구도. left/right 각 label(40자 이내)+body(여러 줄 가능, 800자 한도). 줄바꿈은 \\n.
-- metric: 2~4개 metric. label/value/delta. value 는 짧게(예: "87%", "2.3x", "5분"). delta 는 "+12%p", "▲3.1%" 등.
+- metric: 2~4개 metric. label/value/delta. value 는 숫자+단위만 최대 8자(예: "87%", "2.3x", "5분", "18년 연속"). **문장 금지** — 부연 설명은 label 또는 delta 에. delta 는 "+12%p", "▲3.1%" 등.
 - quote: text(인용문) + attribution(이름·직책).
 - image: title + nodes(2~5개) + direction(기본 horizontal) + caption(선택). nodes 는 프로세스/흐름의 각 단계를 짧은 명사구로(좌→우 또는 위→아래로 이어짐). 화살표는 인접 단계 사이에 자동으로 그려진다. 임의 관계 그래프가 아니라 '한 줄 흐름'으로만 작성.
 - cta: headline + action + contact.

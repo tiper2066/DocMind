@@ -11,6 +11,14 @@ import {
   agendaRowY,
   metricCardX,
   diagramGeometry,
+  diagramNodeColors,
+  metricValueSize,
+  bulletMarkerBox,
+  fitTextSize,
+  quoteLayout,
+  twoColChipW,
+  TWO_COL,
+  METRIC_PANEL,
   assetPath,
   footerBarFill,
   footerIsDarkBar,
@@ -45,7 +53,8 @@ function boxStyle(box: TextBox): React.CSSProperties {
     lineHeight: s.lineHeight ?? 1.2,
     textAlign: s.align,
     fontFamily: s.family,
-    overflow: "hidden",
+    // PowerPoint 텍스트 박스는 내용을 클리핑하지 않음 — 미리보기도 동일하게 (슬라이드 경계 클리핑은 SlideCanvas 가 담당)
+    overflow: "visible",
     whiteSpace: "pre-wrap",
     ...(s.valign
       ? { display: "flex", flexDirection: "column", justifyContent: VALIGN_JUSTIFY[s.valign] }
@@ -219,7 +228,7 @@ function AgendaContent({
           <div
             style={{
               ...boxStyle(L.text.itemIndexProto),
-              top: agendaRowY(i),
+              top: agendaRowY(i, slide.items.length),
             }}
           >
             {String(i + 1).padStart(2, "0")}
@@ -227,7 +236,7 @@ function AgendaContent({
           <div
             style={{
               ...boxStyle(L.text.itemTitleProto),
-              top: agendaRowY(i),
+              top: agendaRowY(i, slide.items.length),
             }}
           >
             {item}
@@ -271,18 +280,22 @@ function BulletsContent({
       {slide.bullets.map((b, i) => {
         const proto = b.level === 0 ? L.text.bulletL0Proto : L.text.bulletL1Proto;
         return (
-          <div
-            key={i}
-            style={{
-              ...boxStyle(proto),
-              top: ys[i],
-            }}
-          >
-            <span aria-hidden style={{ marginRight: 16 }}>
-              {b.level === 0 ? "■" : "—"}
-            </span>
-            {b.text}
-          </div>
+          <Fragment key={i}>
+            {b.level === 0 && <Shapes shapes={[bulletMarkerBox(ys[i])]} />}
+            <div
+              style={{
+                ...boxStyle(proto),
+                top: ys[i],
+              }}
+            >
+              {b.level === 1 && (
+                <span aria-hidden style={{ marginRight: 16 }}>
+                  —
+                </span>
+              )}
+              {b.text}
+            </div>
+          </Fragment>
         );
       })}
     </>
@@ -295,14 +308,58 @@ function TwoColContent({
   slide: Extract<Slide, { kind: "twoCol" }>;
 }) {
   const L = PPT_LAYOUTS.twoCol;
+  const cols = [
+    { label: L.text.leftLabel, body: L.text.leftBody, data: slide.left },
+    { label: L.text.rightLabel, body: L.text.rightBody, data: slide.right },
+  ];
   return (
     <>
       <Shapes shapes={L.shapes} />
       <div style={boxStyle(L.text.title)}>{slide.title}</div>
-      <div style={boxStyle(L.text.leftLabel)}>{slide.left.label}</div>
-      <div style={boxStyle(L.text.leftBody)}>{slide.left.body}</div>
-      <div style={boxStyle(L.text.rightLabel)}>{slide.right.label}</div>
-      <div style={boxStyle(L.text.rightBody)}>{slide.right.body}</div>
+      {cols.map((col, i) => {
+        const panel = TWO_COL.panels[i];
+        const chipW = twoColChipW(col.data.label);
+        const bodySize = fitTextSize(
+          col.data.body,
+          col.body.w,
+          col.body.h,
+          [col.body.style.size, 22, 20, 18],
+          col.body.style.lineHeight ?? 1.55,
+        );
+        return (
+          <Fragment key={i}>
+            <div
+              style={{
+                position: "absolute",
+                left: panel.x,
+                top: panel.y,
+                width: panel.w,
+                height: panel.h,
+                backgroundColor: TWO_COL.panelFill,
+                border: `1px solid ${TWO_COL.panelBorder}`,
+                borderRadius: TWO_COL.panelRadius,
+              }}
+            />
+            <div
+              style={{
+                ...boxStyle({ ...col.label, w: chipW }),
+                backgroundColor: TWO_COL.chipFill,
+                borderRadius: TWO_COL.chipRadius,
+              }}
+            >
+              {col.data.label}
+            </div>
+            <div
+              style={{
+                ...boxStyle(col.body),
+                fontSize: `${bodySize}px`,
+              }}
+            >
+              {col.data.body}
+            </div>
+          </Fragment>
+        );
+      })}
     </>
   );
 }
@@ -322,12 +379,32 @@ function MetricContent({
         const x = metricCardX(i, total);
         const w = total === 3 ? 520 : 380;
         const label = { ...L.text.cardLabelProto, x, w };
-        const value = { ...L.text.cardValueProto, x, w };
+        const value = {
+          ...L.text.cardValueProto,
+          x,
+          w,
+          style: {
+            ...L.text.cardValueProto.style,
+            size: metricValueSize(m.value, w),
+          },
+        };
         const delta = { ...L.text.cardDeltaProto, x, w };
         const isPositive = m.delta?.startsWith("+") || m.delta?.includes("▲");
         const isNegative = m.delta?.startsWith("-") || m.delta?.includes("▼");
         return (
           <Fragment key={i}>
+            <div
+              style={{
+                position: "absolute",
+                left: x,
+                top: METRIC_PANEL.y,
+                width: w,
+                height: METRIC_PANEL.h,
+                backgroundColor: METRIC_PANEL.fill,
+                border: `1px solid ${METRIC_PANEL.border}`,
+                borderRadius: METRIC_PANEL.radius,
+              }}
+            />
             <div style={boxStyle(label)}>{m.label}</div>
             <div style={boxStyle(value)}>{m.value}</div>
             {m.delta && (
@@ -357,11 +434,21 @@ function QuoteContent({
   slide: Extract<Slide, { kind: "quote" }>;
 }) {
   const L = PPT_LAYOUTS.quote.text;
+  const geo = quoteLayout(slide.text);
   return (
     <>
-      <div style={boxStyle(L.quoteMark)}>&ldquo;</div>
-      <div style={boxStyle(L.quote)}>{slide.text}</div>
-      <div style={boxStyle(L.attribution)}>— {slide.attribution}</div>
+      <Shapes shapes={[geo.bar]} />
+      <div
+        style={{
+          ...boxStyle({ ...L.quote, ...geo.quote }),
+          fontSize: `${geo.quote.size}px`,
+        }}
+      >
+        {slide.text}
+      </div>
+      <div style={boxStyle({ ...L.attribution, ...geo.attribution })}>
+        — {slide.attribution}
+      </div>
     </>
   );
 }
@@ -421,9 +508,9 @@ function ImageContent({
             top: b.y,
             width: b.w,
             height: b.h,
-            border: `2px solid ${accent}`,
+            border: `2px solid ${diagramNodeColors(i).border}`,
             borderRadius: 16,
-            backgroundColor: tokens.color.bg,
+            backgroundColor: diagramNodeColors(i).bg,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -555,6 +642,7 @@ export function SlideCanvas({
           width: CANVAS_W,
           height: CANVAS_H,
           backgroundColor: tokens.color.bg,
+          overflow: "hidden",
           transform: `scale(${scale})`,
           transformOrigin: "top left",
         }}

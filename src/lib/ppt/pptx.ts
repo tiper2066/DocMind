@@ -12,6 +12,14 @@ import {
   agendaRowY,
   metricCardX,
   diagramGeometry,
+  diagramNodeColors,
+  metricValueSize,
+  bulletMarkerBox,
+  fitTextSize,
+  quoteLayout,
+  twoColChipW,
+  TWO_COL,
+  METRIC_PANEL,
   assetPath,
   footerBarFill,
   footerIsDarkBar,
@@ -74,6 +82,24 @@ function shapeRect(slide: pptxgen.Slide, shape: ShapeBox) {
     h: pxToInchY(shape.h),
     fill: { color: shape.fill.replace("#", "") },
     line: { type: "none" },
+  });
+}
+
+function panelShape(
+  slide: pptxgen.Slide,
+  box: { x: number; y: number; w: number; h: number },
+  fill: string,
+  borderColor: string,
+  radiusPx: number,
+) {
+  slide.addShape("roundRect", {
+    x: pxToInchX(box.x),
+    y: pxToInchY(box.y),
+    w: pxToInchX(box.w),
+    h: pxToInchY(box.h),
+    rectRadius: pxToInchX(radiusPx),
+    fill: { color: fill.replace("#", "") },
+    line: { color: borderColor.replace("#", ""), width: 0.75 },
   });
 }
 
@@ -149,8 +175,8 @@ function fillAgenda(
   L.shapes?.forEach((sh) => shapeRect(slide, sh));
   slide.addText("목차", textOpts(L.text.title));
   s.items.forEach((item, i) => {
-    const idxBox = { ...L.text.itemIndexProto, y: agendaRowY(i) };
-    const ttlBox = { ...L.text.itemTitleProto, y: agendaRowY(i) };
+    const idxBox = { ...L.text.itemIndexProto, y: agendaRowY(i, s.items.length) };
+    const ttlBox = { ...L.text.itemTitleProto, y: agendaRowY(i, s.items.length) };
     slide.addText(String(i + 1).padStart(2, "0"), textOpts(idxBox));
     slide.addText(item, textOpts(ttlBox));
   });
@@ -180,8 +206,12 @@ function fillBullets(
   s.bullets.forEach((b, i) => {
     const proto = b.level === 0 ? L.text.bulletL0Proto : L.text.bulletL1Proto;
     const box = { ...proto, y: ys[i] };
-    const marker = b.level === 0 ? "■ " : "— ";
-    slide.addText(marker + b.text, textOpts(box));
+    if (b.level === 0) {
+      shapeRect(slide, bulletMarkerBox(ys[i]));
+      slide.addText(b.text, textOpts(box));
+    } else {
+      slide.addText("— " + b.text, textOpts(box));
+    }
   });
 }
 
@@ -192,10 +222,34 @@ function fillTwoCol(
   const L = PPT_LAYOUTS.twoCol;
   L.shapes?.forEach((sh) => shapeRect(slide, sh));
   slide.addText(s.title, textOpts(L.text.title));
-  slide.addText(s.left.label, textOpts(L.text.leftLabel));
-  slide.addText(s.left.body, textOpts(L.text.leftBody));
-  slide.addText(s.right.label, textOpts(L.text.rightLabel));
-  slide.addText(s.right.body, textOpts(L.text.rightBody));
+  const cols = [
+    { label: L.text.leftLabel, body: L.text.leftBody, data: s.left },
+    { label: L.text.rightLabel, body: L.text.rightBody, data: s.right },
+  ];
+  cols.forEach((col, i) => {
+    const panel = TWO_COL.panels[i];
+    panelShape(slide, panel, TWO_COL.panelFill, TWO_COL.panelBorder, TWO_COL.panelRadius);
+    const chipW = twoColChipW(col.data.label);
+    panelShape(
+      slide,
+      { x: col.label.x, y: col.label.y, w: chipW, h: TWO_COL.chipH },
+      TWO_COL.chipFill,
+      TWO_COL.chipFill,
+      TWO_COL.chipRadius,
+    );
+    slide.addText(col.data.label, textOpts({ ...col.label, w: chipW }));
+    const bodySize = fitTextSize(
+      col.data.body,
+      col.body.w,
+      col.body.h,
+      [col.body.style.size, 22, 20, 18],
+      col.body.style.lineHeight ?? 1.55,
+    );
+    slide.addText(
+      col.data.body,
+      textOpts({ ...col.body, style: { ...col.body.style, size: bodySize } }),
+    );
+  });
 }
 
 function fillMetric(
@@ -209,8 +263,26 @@ function fillMetric(
   const cardW = total === 3 ? 520 : 380;
   s.metrics.forEach((m, i) => {
     const x = metricCardX(i, total);
+    panelShape(
+      slide,
+      { x, y: METRIC_PANEL.y, w: cardW, h: METRIC_PANEL.h },
+      METRIC_PANEL.fill,
+      METRIC_PANEL.border,
+      METRIC_PANEL.radius,
+    );
     slide.addText(m.label, textOpts({ ...L.text.cardLabelProto, x, w: cardW }));
-    slide.addText(m.value, textOpts({ ...L.text.cardValueProto, x, w: cardW }));
+    slide.addText(
+      m.value,
+      textOpts({
+        ...L.text.cardValueProto,
+        x,
+        w: cardW,
+        style: {
+          ...L.text.cardValueProto.style,
+          size: metricValueSize(m.value, cardW),
+        },
+      }),
+    );
     if (m.delta) {
       const isPos = m.delta.startsWith("+") || m.delta.includes("▲");
       const isNeg = m.delta.startsWith("-") || m.delta.includes("▼");
@@ -227,9 +299,20 @@ function fillMetric(
 
 function fillQuote(slide: pptxgen.Slide, s: Extract<Slide, { kind: "quote" }>) {
   const L = PPT_LAYOUTS.quote.text;
-  slide.addText("“", textOpts(L.quoteMark));
-  slide.addText(s.text, textOpts(L.quote));
-  slide.addText(`— ${s.attribution}`, textOpts(L.attribution));
+  const geo = quoteLayout(s.text);
+  shapeRect(slide, geo.bar);
+  slide.addText(
+    s.text,
+    textOpts({
+      ...L.quote,
+      ...geo.quote,
+      style: { ...L.quote.style, size: geo.quote.size },
+    }),
+  );
+  slide.addText(
+    `— ${s.attribution}`,
+    textOpts({ ...L.attribution, ...geo.attribution }),
+  );
 }
 
 function fillImage(slide: pptxgen.Slide, s: Extract<Slide, { kind: "image" }>) {
@@ -255,6 +338,7 @@ function fillImage(slide: pptxgen.Slide, s: Extract<Slide, { kind: "image" }>) {
 
   nodes.forEach((label, i) => {
     const b = geo.boxes[i];
+    const nodeColor = diagramNodeColors(i);
     slide.addText(label, {
       x: pxToInchX(b.x),
       y: pxToInchY(b.y),
@@ -262,8 +346,8 @@ function fillImage(slide: pptxgen.Slide, s: Extract<Slide, { kind: "image" }>) {
       h: pxToInchY(b.h),
       shape: "roundRect",
       rectRadius: 0.08,
-      fill: { color: tokens.color.bg.replace("#", "") },
-      line: { color: accent, width: 2 },
+      fill: { color: nodeColor.bg.replace("#", "") },
+      line: { color: nodeColor.border.replace("#", ""), width: 2 },
       fontFace: "Pretendard",
       fontSize: pxToPt(ls.size),
       color: ls.color.replace("#", ""),

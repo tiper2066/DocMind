@@ -5,8 +5,9 @@ import { db } from "@/db/client";
 import { documents, documentVersions } from "@/db/schema";
 import { getWorkspaceContext } from "@/lib/rbac";
 import { renderPptx } from "@/lib/ppt/pptx";
+import { PPT_LAYOUT_REV } from "@/lib/ppt/layouts";
 import { DeckSchema } from "@/lib/ppt/types";
-import { uploadPptx, downloadPptx } from "@/lib/storage";
+import { uploadPptx, downloadPptx, deletePptxObjects } from "@/lib/storage";
 
 const PPTX_MIME =
   "application/vnd.openxmlformats-officedocument.presentationml.presentation";
@@ -60,20 +61,29 @@ export async function GET(
     .trim();
   const downloadName = `${safeTitle} v${row.v.version}.pptx`;
 
+  // 캐시 키에 레이아웃 개정 번호(-r{N})가 포함된다 — 레이아웃 변경 시 옛 캐시는
+  // 키 불일치로 무시되고 재생성된다 (미리보기=현행 레이아웃, 다운로드=옛 캐시 어긋남 방지).
+  const revSuffix = `-r${PPT_LAYOUT_REV}.pptx`;
+  const cacheValid = row.v.pptxObjectKey?.endsWith(revSuffix) ?? false;
+
   let bytes: ArrayBuffer;
-  if (row.v.pptxObjectKey) {
+  if (row.v.pptxObjectKey && cacheValid) {
     bytes = await downloadPptx(row.v.pptxObjectKey);
   } else {
     const deck = DeckSchema.parse(row.v.slidesJson);
     const buf = await renderPptx(deck);
 
-    const key = `${ctx.workspaceId}/${row.v.documentId}/v${row.v.version}.pptx`;
+    const key = `${ctx.workspaceId}/${row.v.documentId}/v${row.v.version}${revSuffix}`;
     await uploadPptx(key, buf);
 
     await db
       .update(documentVersions)
       .set({ pptxObjectKey: key })
       .where(eq(documentVersions.id, row.v.id));
+
+    if (row.v.pptxObjectKey && row.v.pptxObjectKey !== key) {
+      await deletePptxObjects([row.v.pptxObjectKey]);
+    }
 
     bytes = buf.buffer.slice(
       buf.byteOffset,

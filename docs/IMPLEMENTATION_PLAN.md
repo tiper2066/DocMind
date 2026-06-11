@@ -984,6 +984,15 @@ SENTRY_DSN=
 
 ## 16. 결정 로그
 
+- **승인 게이트를 "감지 직후"로 이동 — 감지→승인→잔여 4단계 자동 진행** (2026-06-11):
+  사용자 결정: "모든 단계를 거친 뒤의 승인은 의미가 약하다" → 루프를 **감지에서 멈추고**, 사용자가 "발행 승인"을 해야 인식→판단→행동→학습이 진행되도록 변경. 행동 단계는 (승인이 선행됐으므로) **자동 발행 + Slack/Email 발송**까지 수행 — outbound 는 승인 후라는 불변식은 유지(승인 시점이 앞으로 이동했을 뿐).
+  - **감지**: [agent.ts](../src/inngest/agent.ts) detect 가 `source.changed` 발화 대신 **`approvals(kind='regenerate')`** 생성(payload 에 newText 8000자 보관) + `approval.requested` 이벤트. 같은 소스의 미결 regenerate 승인이 있으면 중복 카드 생성 안 함.
+  - **재개**: [approve API](../src/app/api/agent/approve/route.ts) 가 kind=regenerate 분기 — 승인 시 payload 로 `source.changed` 발화(`approvedPublish: true`), 거부 시 `endRun` + 갱신 중단. 플래그는 perceive→reason→act 이벤트 스키마([client.ts](../src/inngest/client.ts))로 관통, act 는 `autoPublish || approvedPublish` 로 발행 + `dispatchApprovalNotifications` 즉시 발송.
+  - **UI**: [ApprovalActions](../src/components/agent/ApprovalActions.tsx) "나중에"→**"승인 거부"**. [ApprovalQueue](../src/components/agent/ApprovalQueue.tsx)(기존 미사용 컴포넌트를 실사용으로) 우측 컬럼에 regenerate 대기 카드(소스명·변경 비율·안내문) + **최근 거부 5건 "거부" 뱃지** 표시. 기존 kind=publish 승인(레거시/시드 데모 카드)은 기존 경로 그대로 동작.
+  - **스크립트**: [force-change.ts](../scripts/force-change.ts) 2단 폴링으로 재작성 — A) 감지+regenerate 카드 대기 → KEEP_PENDING 이면 종료(대기 카드 유지), B) 승인 시뮬레이션(source.changed 발화), C) 5단계 완주+published 신버전 검증.
+  - **검증(격리 로컬 e2e)**: prod 는 구코드라 로컬 3001(`next start` + INNGEST_DEV — next dev 는 동일 디렉토리 2개 불가) + inngest-cli 로 검증. 감지 2.2s 멈춤 → 승인 → 20.5s 5단계 완주 → v7 자동 published + slack:sent. KEEP_PENDING 경로·중복 카드 방지 확인. lint·build PASS.
+  - **유의**: 승인 시점엔 새 버전이 아직 없으므로 **버전 비교는 승인 후에만** 가능(카드에는 변경 비율·소스명 표시). 승인 클릭→발행까지 LLM 단계로 20~40초 소요(피드에 실시간 표시).
+
 - **KB "최신 지식 및 동향" 자동 수집 기능** (2026-06-11):
   KB 페이지 우측 상단 스위치 ON 동안 AI 가 KB 주제 기반으로 웹을 검색해 관련 최신 URL 을 자동 수집하는 기능. 수집분은 세 번째 탭 "최신 지식 및 동향"에 기존 URL 카드와 동일하게 표시.
   - **검색**: Anthropic **web search 서버 도구**(`web_search_20250305`, Sonnet) — 별도 검색 벤더 없음. KB 주제(origin='user' ready 소스의 title/tags/summary) → 검색 → 후보 JSON. `pause_turn` 은 assistant 턴 재전송으로 계속. 프롬프트에 **억지 충원 금지** 명시(관련성 낮으면 적게/빈 배열).

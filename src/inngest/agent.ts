@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 
 import {
   inngest,
@@ -39,6 +39,7 @@ import {
   changeRatio,
 } from "@/lib/agent/events";
 import { shouldAutoPublish, getNotifyChannel } from "@/lib/agent/policy";
+import { dispatchApprovalNotifications } from "@/lib/notify";
 import {
   DIFF_PERCEIVE_SYSTEM,
   CLASSIFY_CHANGE_TOOL,
@@ -102,10 +103,7 @@ export const agentDetect = inngest.createFunction(
       });
     });
 
-    const changedPayloads: Array<{
-      name: "source.changed";
-      data: Record<string, unknown>;
-    }> = [];
+    const changedPayloads: Array<{ sourceId: string; runId: string }> = [];
 
     for (const cand of candidates) {
       const result = await step.run(`detect-${cand.id}`, async () => {
@@ -144,6 +142,20 @@ export const agentDetect = inngest.createFunction(
           }
         }
 
+        // 같은 소스의 미결 regenerate 승인이 이미 있으면 중복 카드를 만들지 않는다.
+        const [dupe] = await db
+          .select({ id: approvals.id })
+          .from(approvals)
+          .where(
+            and(
+              eq(approvals.kind, "regenerate"),
+              isNull(approvals.decision),
+              sql`${approvals.payload}->>'sourceId' = ${cand.id}`,
+            ),
+          )
+          .limit(1);
+        if (dupe) return null;
+
         const agentId = data.agentId ?? (await ensureMonitorAgent(cand.workspaceId));
         const runId = await startRun(
           agentId,
@@ -163,26 +175,38 @@ export const agentDetect = inngest.createFunction(
           .set({ contentHash: newHash, lastCrawledAt: new Date() })
           .where(eq(sources.id, cand.id));
 
-        return {
-          workspaceId: cand.workspaceId,
-          agentId,
+        // 루프는 여기서 멈춘다 — 감지 결과를 승인 카드(kind: regenerate)로 올리고,
+        // 사용자가 "발행 승인" 하면 approve API 가 source.changed 를 발화해
+        // 인식→판단→행동→학습을 재개한다 (행동 단계에서 자동 발행 + 알림).
+        const [src] = await db
+          .select({ title: sources.title })
+          .from(sources)
+          .where(eq(sources.id, cand.id))
+          .limit(1);
+        await db.insert(approvals).values({
           runId,
+          kind: "regenerate",
+          payload: {
+            workspaceId: cand.workspaceId,
+            agentId,
+            sourceId: cand.id,
+            sourceTitle: src?.title ?? null,
+            previousHash: oldHash,
+            nextHash: newHash,
+            changeRatio: ratio,
+            newText: newText.slice(0, 8000),
+            forced,
+          },
+        });
+        await appendEvent(runId, "detect", "approval.requested", {
           sourceId: cand.id,
-          previousHash: oldHash,
-          nextHash: newHash,
           changeRatio: ratio,
-          newText: newText.slice(0, 8000),
-          forced,
-        };
+        });
+
+        return { sourceId: cand.id, runId };
       });
 
-      if (result) {
-        changedPayloads.push({ name: "source.changed", data: result });
-      }
-    }
-
-    if (changedPayloads.length > 0) {
-      await step.sendEvent("emit-changed", changedPayloads);
+      if (result) changedPayloads.push(result);
     }
 
     return { scanned: candidates.length, changed: changedPayloads.length };
@@ -255,6 +279,7 @@ export const agentPerceive = inngest.createFunction(
         agentId: data.agentId,
         runId: data.runId,
         sourceId: data.sourceId,
+        approvedPublish: data.approvedPublish,
         perception,
       },
     });
@@ -373,6 +398,7 @@ export const agentReason = inngest.createFunction(
         agentId: data.agentId,
         runId: data.runId,
         sourceId: data.sourceId,
+        approvedPublish: data.approvedPublish,
         changeType: data.perception.changeType,
         impacts: impacts.map((i) => ({
           documentId: i.documentId,
@@ -413,7 +439,8 @@ export const agentAct = inngest.createFunction(
         notifyChannel: agent ? getNotifyChannel(agent) : null,
       };
     });
-    const autoPublish = policy.autoPublish;
+    // 감지 단계에서 사용자가 이미 발행을 승인한 경우(approvedPublish) 2차 승인 없이 발행.
+    const autoPublish = policy.autoPublish || data.approvedPublish;
 
     const targets = data.impacts.filter((i) => i.shouldRegenerate);
 
@@ -495,6 +522,16 @@ export const agentAct = inngest.createFunction(
             .update(documents)
             .set({ status: "ready", updatedAt: new Date() })
             .where(eq(documents.id, impact.documentId));
+          // 승인은 감지 단계에서 이미 받았으므로(불변식: outbound 는 승인 후) 여기서 발송.
+          await dispatchApprovalNotifications({
+            runId: data.runId,
+            workspaceId: data.workspaceId,
+            documentTitle: impact.title,
+            version: ver.version,
+            changeNote,
+            approvalId: appr.id,
+            decidedByEmail: null,
+          });
         }
 
         return {

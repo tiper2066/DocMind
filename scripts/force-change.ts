@@ -3,7 +3,7 @@
 // 5% 임계를 우회 → 오프라인·결정론적으로 5단계(detect→perceive→reason→act→learn)를 돌린다.
 if (!process.env.INNGEST_DEV) process.env.INNGEST_DEV = "1";
 
-import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { db } from "../src/db/client";
 import {
   workspaces,
@@ -196,10 +196,40 @@ async function main() {
   });
   console.log("event sent → agent/detect.requested\n");
 
+  // 새 버전이 생겼는지 비교할 기준점 (act 가 만들 버전은 이보다 커야 함).
+  const [baseVer] = await db
+    .select({ version: documentVersions.version })
+    .from(documentVersions)
+    .where(eq(documentVersions.documentId, documentId))
+    .orderBy(desc(documentVersions.version))
+    .limit(1);
+  const baseVersion = baseVer?.version ?? 0;
+
   const start = Date.now();
   let runId: string | null = null;
   const seen = new Set<string>();
 
+  const pollEvents = async (rid: string): Promise<Set<string>> => {
+    const evs = await db
+      .select({ phase: agentEvents.phase, type: agentEvents.type })
+      .from(agentEvents)
+      .where(eq(agentEvents.runId, rid))
+      .orderBy(agentEvents.ts);
+    for (const e of evs) {
+      const key = `${e.phase}:${e.type}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        console.log(
+          `[${((Date.now() - start) / 1000).toFixed(1)}s] ${e.phase} → ${e.type}`,
+        );
+      }
+    }
+    return new Set(evs.map((e) => e.phase));
+  };
+
+  // ── A. 감지 단계 → regenerate 승인 카드 생성 대기 ──
+  // (새 흐름: 루프는 감지에서 멈추고, 승인해야 인식 이후가 진행된다.)
+  let regenApproval: { id: string; payload: unknown } | null = null;
   while (Date.now() - start < TIMEOUT_MS) {
     if (!runId) {
       const [run] = await db
@@ -218,108 +248,104 @@ async function main() {
         console.log(`run started: ${runId}`);
       }
     }
-
     if (runId) {
-      const evs = await db
-        .select({ phase: agentEvents.phase, type: agentEvents.type })
-        .from(agentEvents)
-        .where(eq(agentEvents.runId, runId))
-        .orderBy(agentEvents.ts);
-      for (const e of evs) {
-        const key = `${e.phase}:${e.type}`;
-        if (!seen.has(key)) {
-          seen.add(key);
-          console.log(
-            `[${((Date.now() - start) / 1000).toFixed(1)}s] ${e.phase} → ${e.type}`,
-          );
-        }
+      await pollEvents(runId);
+      const [appr] = await db
+        .select({ id: approvals.id, payload: approvals.payload })
+        .from(approvals)
+        .where(
+          and(eq(approvals.runId, runId), eq(approvals.kind, "regenerate")),
+        )
+        .limit(1);
+      if (appr) {
+        regenApproval = appr;
+        break;
       }
-      const phases = new Set(evs.map((e) => e.phase));
-      if (EXPECTED_PHASES.every((p) => phases.has(p))) break;
     }
+    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+  }
 
+  if (!runId || !regenApproval) {
+    console.error(`\n✗ 감지 단계/승인 카드가 ${TIMEOUT_MS / 1000}s 내 생성되지 않음`);
+    process.exit(1);
+  }
+  console.log(
+    `\n감지 완료 — regenerate 승인 대기 카드 생성 (${((Date.now() - start) / 1000).toFixed(1)}s)`,
+  );
+
+  // KEEP_PENDING: 데모용 — 감지 단계 승인 카드를 그대로 남긴다(발표자가 UI 에서
+  // "발행 승인" 클릭 시 인식→판단→행동→학습 진행 + 자동 발행).
+  if (process.env.KEEP_PENDING) {
+    console.log(
+      "  KEEP_PENDING=1 → 승인 생략. 에이전트 페이지에서 '발행 승인' 클릭 시 잔여 4단계가 진행됩니다.",
+    );
+    process.exit(0);
+  }
+
+  // ── B. 승인 시뮬레이션 (UI "발행 승인"과 동일) → 잔여 단계 재개 ──
+  const rp = regenApproval.payload as {
+    workspaceId: string;
+    agentId: string;
+    sourceId: string;
+    previousHash: string | null;
+    nextHash: string;
+    changeRatio: number;
+    newText: string;
+    forced?: boolean;
+  };
+  await db
+    .update(approvals)
+    .set({ decision: "approve", decidedAt: new Date() })
+    .where(eq(approvals.id, regenApproval.id));
+  await inngest.send({
+    name: "source.changed",
+    data: {
+      workspaceId: rp.workspaceId,
+      agentId: rp.agentId,
+      runId,
+      sourceId: rp.sourceId,
+      previousHash: rp.previousHash,
+      nextHash: rp.nextHash,
+      changeRatio: rp.changeRatio,
+      newText: rp.newText,
+      forced: rp.forced ?? false,
+      approvedPublish: true,
+    },
+  });
+  console.log("승인 → source.changed 발화 (인식→판단→행동→학습 재개)\n");
+
+  // ── C. 5단계 완주 대기 ──
+  const resumeStart = Date.now();
+  let phases = new Set<string>();
+  while (Date.now() - resumeStart < TIMEOUT_MS) {
+    phases = await pollEvents(runId);
+    if (EXPECTED_PHASES.every((p) => phases.has(p))) break;
     await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
   }
 
   const elapsed = ((Date.now() - start) / 1000).toFixed(1);
-  if (!runId) {
-    console.error(`\n✗ no run started within ${TIMEOUT_MS / 1000}s`);
-    process.exit(1);
-  }
+  const all5 = EXPECTED_PHASES.every((p) => phases.has(p));
 
-  const finalEvents = await db
-    .select({ phase: agentEvents.phase })
-    .from(agentEvents)
-    .where(eq(agentEvents.runId, runId));
-  const phases = new Set(finalEvents.map((e) => e.phase));
-
-  const runApprovals = await db
-    .select({ id: approvals.id, decision: approvals.decision })
-    .from(approvals)
-    .where(eq(approvals.runId, runId));
-
-  // 드래프트 신버전이 생겼는지 확인.
-  const draftVersions = await db
-    .select({ id: documentVersions.id, status: documentVersions.status })
+  // 승인 선행 흐름이므로 act 가 published 신버전을 만들었는지 확인.
+  const [latestVer] = await db
+    .select({ version: documentVersions.version, status: documentVersions.status })
     .from(documentVersions)
-    .where(
-      and(
-        eq(documentVersions.documentId, documentId),
-        inArray(documentVersions.status, ["draft", "published"]),
-      ),
-    )
-    .orderBy(desc(documentVersions.version));
+    .where(eq(documentVersions.documentId, documentId))
+    .orderBy(desc(documentVersions.version))
+    .limit(1);
+  const publishOk =
+    !!latestVer &&
+    latestVer.version > baseVersion &&
+    latestVer.status === "published";
 
   console.log(`\nacceptance (${elapsed}s):`);
-  const all5 = EXPECTED_PHASES.every((p) => phases.has(p));
+  console.log(`  5 phase events:    ${all5 ? "✓" : "✗"} (${[...phases].join(", ")})`);
+  console.log(`  approve→regen:     ✓ (regenerate 승인 후 재개)`);
   console.log(
-    `  5 phase events: ${all5 ? "✓" : "✗"} (${[...phases].join(", ")})`,
+    `  published version: ${publishOk ? "✓" : "✗"} (v${latestVer?.version ?? "-"} ${latestVer?.status ?? "-"})`,
   );
-  console.log(
-    `  approval row:   ${runApprovals.length > 0 ? "✓" : "✗"} (${runApprovals.length})`,
-  );
-  console.log(`  draft version:  ${draftVersions.length > 1 ? "✓" : "✗"}`);
 
-  // KEEP_PENDING: 데모용 — 자동 승인을 건너뛰고 대기 카드를 그대로 남긴다(발표자가
-  // UI 에서 직접 발행). 검증 e2e 가 아니라 데모 준비용 트리거로 쓸 때.
-  if (process.env.KEEP_PENDING) {
-    const pendingCount = runApprovals.filter((a) => !a.decision).length;
-    console.log(
-      `  KEEP_PENDING=1 → 자동 승인 생략. 대기 승인 ${pendingCount}건 유지 (에이전트 페이지에서 확인).`,
-    );
-    process.exit(all5 && runApprovals.length > 0 ? 0 : 1);
-  }
-
-  // 승인 → published 검증.
-  let publishOk = false;
-  const pendingApproval = runApprovals.find((a) => !a.decision);
-  if (pendingApproval) {
-    const payload = await db
-      .select({ payload: approvals.payload })
-      .from(approvals)
-      .where(eq(approvals.id, pendingApproval.id))
-      .limit(1);
-    const versionId = (payload[0]?.payload as { versionId?: string })?.versionId;
-    await db
-      .update(approvals)
-      .set({ decision: "approve", decidedAt: new Date() })
-      .where(eq(approvals.id, pendingApproval.id));
-    if (versionId) {
-      await db
-        .update(documentVersions)
-        .set({ status: "published" })
-        .where(eq(documentVersions.id, versionId));
-      const [v] = await db
-        .select({ status: documentVersions.status })
-        .from(documentVersions)
-        .where(eq(documentVersions.id, versionId))
-        .limit(1);
-      publishOk = v?.status === "published";
-    }
-  }
-  console.log(`  approve→publish: ${publishOk ? "✓" : "✗"}`);
-
-  process.exit(all5 && runApprovals.length > 0 && publishOk ? 0 : 1);
+  process.exit(all5 && publishOk ? 0 : 1);
 }
 
 main().catch((err) => {

@@ -31,6 +31,9 @@ export const SourceChanged = z.object({
   changeRatio: z.number(),
   newText: z.string(),
   forced: z.boolean().default(false),
+  // 사용자가 감지 단계에서 이미 "발행 승인"을 했다는 표시 — act 가 2차 승인 없이
+  // 자동 발행 + 알림 발송까지 수행한다.
+  approvedPublish: z.boolean().default(false),
 });
 
 export const SourcePerceived = z.object({
@@ -38,6 +41,7 @@ export const SourcePerceived = z.object({
   agentId: z.string().uuid(),
   runId: z.string().uuid(),
   sourceId: z.string().uuid(),
+  approvedPublish: z.boolean().default(false),
   perception: z.object({
     changeType: z.enum(["added", "removed", "modified", "mixed"]),
     summary: z.string(),
@@ -50,6 +54,7 @@ export const SourceImpactReady = z.object({
   agentId: z.string().uuid(),
   runId: z.string().uuid(),
   sourceId: z.string().uuid(),
+  approvedPublish: z.boolean().default(false),
   changeType: z.string(),
   impacts: z.array(
     z.object({

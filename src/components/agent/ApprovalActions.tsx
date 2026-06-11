@@ -22,16 +22,24 @@ export function ApprovalActions({ approvalId }: { approvalId: string }) {
           throw new Error(body?.error ?? `HTTP ${res.status}`);
         }
         if (decision === "approve") {
-          const slack = body?.notify?.slack;
-          if (slack === "failed") {
-            toast.warning("발행 승인됨 — Slack 발송 실패, 수동 공유가 필요합니다");
-          } else if (slack === "sent") {
-            toast.success("발행 승인됨 · Slack 알림 발송 완료");
+          if (body?.resumed) {
+            toast.success(
+              "발행 승인됨 — 인식→판단→행동→학습 단계를 진행해 문서를 갱신합니다",
+            );
           } else {
-            toast.success("발행 승인됨");
+            const slack = body?.notify?.slack;
+            if (slack === "failed") {
+              toast.warning(
+                "발행 승인됨 — Slack 발송 실패, 수동 공유가 필요합니다",
+              );
+            } else if (slack === "sent") {
+              toast.success("발행 승인됨 · Slack 알림 발송 완료");
+            } else {
+              toast.success("발행 승인됨");
+            }
           }
         } else {
-          toast.success("거부됨");
+          toast.success("승인 거부됨 — 문서를 갱신하지 않습니다");
         }
         router.refresh();
       } catch (err) {
@@ -47,11 +55,12 @@ export function ApprovalActions({ approvalId }: { approvalId: string }) {
       </Button>
       <Button
         size="sm"
-        variant="ghost"
+        variant="outline"
         disabled={pending}
+        className="text-destructive hover:text-destructive"
         onClick={() => decide("reject")}
       >
-        나중에
+        승인 거부
       </Button>
     </div>
   );

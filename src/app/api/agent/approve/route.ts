@@ -15,8 +15,9 @@ import {
   users,
 } from "@/db/schema";
 import { getWorkspaceContext } from "@/lib/rbac";
-import { appendEvent } from "@/lib/agent/events";
+import { appendEvent, endRun } from "@/lib/agent/events";
 import { dispatchApprovalNotifications } from "@/lib/notify";
+import { inngest } from "@/inngest/client";
 
 export const runtime = "nodejs";
 
@@ -75,6 +76,60 @@ export async function POST(req: Request) {
     .update(approvals)
     .set({ decision, decidedBy: ctx.userId, decidedAt: new Date() })
     .where(eq(approvals.id, approvalId));
+
+  // ── kind=regenerate: 감지 단계에서 멈춘 루프의 재개/중단 관문 ──
+  // 승인 → source.changed 발화로 인식→판단→행동→학습 재개 (행동에서 자동 발행+알림).
+  // 거부 → run 종료, 문서 갱신 없음.
+  if (row.approval.kind === "regenerate") {
+    const rp = (row.approval.payload ?? {}) as {
+      agentId?: string;
+      sourceId?: string;
+      previousHash?: string | null;
+      nextHash?: string;
+      changeRatio?: number;
+      newText?: string;
+      forced?: boolean;
+    };
+
+    await appendEvent(runId, "detect", "approval.decided", {
+      approvalId,
+      decision,
+      sourceId: rp.sourceId,
+    });
+    await db.insert(auditLogs).values({
+      workspaceId: ctx.workspaceId,
+      actorId: ctx.userId,
+      action: `approval.${decision}`,
+      target: approvalId,
+    });
+
+    if (decision === "approve") {
+      await inngest.send({
+        name: "source.changed",
+        data: {
+          workspaceId: ctx.workspaceId,
+          agentId: rp.agentId,
+          runId,
+          sourceId: rp.sourceId,
+          previousHash: rp.previousHash ?? null,
+          nextHash: rp.nextHash ?? "",
+          changeRatio: rp.changeRatio ?? 1,
+          newText: rp.newText ?? "",
+          forced: rp.forced ?? false,
+          approvedPublish: true,
+        },
+      });
+      return NextResponse.json({
+        ok: true,
+        approvalId,
+        decision,
+        resumed: true,
+      });
+    }
+
+    await endRun(runId, "succeeded", "승인 거부 — 문서 갱신 중단");
+    return NextResponse.json({ ok: true, approvalId, decision, resumed: false });
+  }
 
   let notify: { slack: string; email: string } | null = null;
 

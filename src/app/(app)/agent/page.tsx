@@ -15,6 +15,7 @@ import { getWorkspaceContext } from "@/lib/rbac";
 import { ensureMonitorAgent } from "@/lib/agent/events";
 import type { AgentEventMessage } from "@/lib/sse";
 import { DetectButton } from "@/components/agent/DetectButton";
+import { ApprovalQueue } from "@/components/agent/ApprovalQueue";
 import { AgentDocs, type DocGroup } from "@/components/agent/AgentDocs";
 import {
   BulkApproveCard,
@@ -82,6 +83,7 @@ export default async function AgentPage({
   const pendingRows = await db
     .select({
       id: approvals.id,
+      kind: approvals.kind,
       runId: approvals.runId,
       payload: approvals.payload,
       docTitle: documents.title,
@@ -95,20 +97,62 @@ export default async function AgentPage({
 
   const pendingByVersion = new Map<string, { approvalId: string; runId: string }>();
   const bulkItems: BulkPendingItem[] = [];
+  const regenPending: Array<{
+    id: string;
+    kind: string;
+    docTitle: string | null;
+    payload: unknown;
+  }> = [];
   for (const p of pendingRows) {
-    const payload = (p.payload ?? {}) as { versionId?: string; version?: number };
+    const payload = (p.payload ?? {}) as {
+      versionId?: string;
+      version?: number;
+      sourceTitle?: string | null;
+    };
     if (payload.versionId) {
       pendingByVersion.set(payload.versionId, {
         approvalId: p.id,
         runId: p.runId,
       });
     }
+    if (p.kind === "regenerate") {
+      regenPending.push({
+        id: p.id,
+        kind: p.kind,
+        docTitle: p.docTitle,
+        payload: p.payload,
+      });
+    }
     bulkItems.push({
       id: p.id,
-      title: p.docTitle ?? "문서",
+      title:
+        p.kind === "regenerate"
+          ? (payload.sourceTitle ?? "소스 변경")
+          : (p.docTitle ?? "문서"),
       version: payload.version ?? null,
     });
   }
+
+  // 최근 거부된 승인 — 카드에 "거부" 뱃지로 표시.
+  const rejectedRows = await db
+    .select({
+      id: approvals.id,
+      kind: approvals.kind,
+      payload: approvals.payload,
+      docTitle: documents.title,
+    })
+    .from(approvals)
+    .innerJoin(agentRuns, eq(agentRuns.id, approvals.runId))
+    .innerJoin(agents, eq(agents.id, agentRuns.agentId))
+    .leftJoin(documents, eq(documents.id, approvals.documentId))
+    .where(
+      and(
+        eq(agents.workspaceId, ctx.workspaceId),
+        eq(approvals.decision, "reject"),
+      ),
+    )
+    .orderBy(desc(approvals.decidedAt))
+    .limit(5);
 
   // 대기 런의 이벤트 백로그(피드/루프 초기값). 라이브는 클라 SSE 가 이어받음.
   const pendingRunIds = [...new Set(pendingRows.map((p) => p.runId))];
@@ -282,6 +326,17 @@ export default async function AgentPage({
               <StatRow label="모니터링 (URL 소스)" value={monitored} />
             </div>
           </div>
+
+          {(regenPending.length > 0 || rejectedRows.length > 0) && (
+            <div className="rounded-xl border border-hairline bg-canvas p-5">
+              <ApprovalQueue
+                pending={regenPending}
+                rejected={rejectedRows}
+                highlighted={null}
+                highlightId={highlightId}
+              />
+            </div>
+          )}
 
           <BulkApproveCard items={bulkItems} />
         </aside>

@@ -984,6 +984,17 @@ SENTRY_DSN=
 
 ## 16. 결정 로그
 
+- **버전 비교 하이브리드(슬라이드 쌍 + per-slide diff) & 모바일 인라인** (2026-06-12):
+  문서 상세의 버전 비교를 텍스트 diff 단일 화면에서 하이브리드로 교체 — 전날 구두 합의됐으나 코드·문서에 미반영이었던 누락분.
+  - **슬라이드 단위 diff**: [diff.ts](../src/lib/diff.ts) `slideLines`(슬라이드 1장 → 번호 없는 읽기 라인 — 위치 이동과 내용 변경을 분리), `diffSlidePairs`(내용 동일 슬라이드를 LCS 앵커로 잡고 앵커 사이 구간을 순서대로 짝지어 same/changed/added/removed). `deckToLines` 출력은 기존과 동일(전체 diff·stats 불변).
+  - **UI**: [VersionCompare](../src/components/docs/VersionCompare.tsx) — 좌(이전)·우(최신) SlidePreview 쌍(SlideCanvas 재사용, 서버 렌더), 변경 쌍은 블루 강조 테두리 + 아래 해당 슬라이드 라인 diff, 신규/삭제는 뱃지 + 점선 placeholder, 연속 동일 구간은 "동일한 슬라이드 N장 생략 (#a–#b)" 한 줄로 접음. 썸네일 330px 고정.
+  - **모바일(md 미만)**: 고정폭 썸네일이 페이지 폭을 밀어내는 문제 → 하단 비교 섹션은 `hidden md:block`, 대신 타임라인의 base(이전) 카드 **바로 아래** 인라인 `VersionCompareText`(텍스트 전용 — 신규/삭제 슬라이드는 전체 내용을 +/− 라인으로 합성) + `v{a} → v{b}` 요약 줄. 다른 버전 선택 시 서버 재렌더로 블록이 따라 이동. 단일 버전 문서는 "비교할 이전 버전이 없습니다" 안내.
+  - **폴백**: `DeckSchema.safeParse` 실패 버전은 기존 텍스트 diff(`DiffRows`)로 그대로 표시.
+  - 웹 UI 만의 변경이라 `PPT_LAYOUT_REV` 불변. lint·build PASS.
+
+- **발표자 잠금 버튼 hover 툴팁 통일** (2026-06-12):
+  TREND_ADMIN_EMAILS/APPROVAL_ADMIN_EMAILS 화이트리스트 밖 사용자가 보는 비활성 버튼 5곳(TrendSwitch·DetectButton·ApprovalActions·PublishAllBar·BulkApproveCard)의 네이티브 `title` 속성(문구 제각각)을 [PresenterLockTooltip](../src/components/PresenterLockTooltip.tsx)(base-ui Tooltip 공용 래퍼)으로 교체하고 문구를 "데모버전이며 발표자만 작동가능합니다."로 통일. 항상 노출되던 중복 안내 문장(ApprovalActions·BulkApproveCard)은 제거, PublishAllBar 의 "발표자 전용" 라벨은 유지. disabled 요소는 hover 이벤트가 없어 트리거는 래퍼 span — CLAUDE.md §8 함정 참조. 서버(API 403)가 실제 방어선인 점은 불변.
+
 - **승인 게이트를 "감지 직후"로 이동 — 감지→승인→잔여 4단계 자동 진행** (2026-06-11):
   사용자 결정: "모든 단계를 거친 뒤의 승인은 의미가 약하다" → 루프를 **감지에서 멈추고**, 사용자가 "발행 승인"을 해야 인식→판단→행동→학습이 진행되도록 변경. 행동 단계는 (승인이 선행됐으므로) **자동 발행 + Slack/Email 발송**까지 수행 — outbound 는 승인 후라는 불변식은 유지(승인 시점이 앞으로 이동했을 뿐).
   - **감지**: [agent.ts](../src/inngest/agent.ts) detect 가 `source.changed` 발화 대신 **`approvals(kind='regenerate')`** 생성(payload 에 newText 8000자 보관) + `approval.requested` 이벤트. 같은 소스의 미결 regenerate 승인이 있으면 중복 카드 생성 안 함.

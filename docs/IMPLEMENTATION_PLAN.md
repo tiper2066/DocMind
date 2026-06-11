@@ -984,6 +984,14 @@ SENTRY_DSN=
 
 ## 16. 결정 로그
 
+- **KB "최신 지식 및 동향" 기능 숨김 설정 — 하드코딩 관리자 전용** (2026-06-12):
+  설정 페이지에서 트렌드 기능 전체(스위치·탭·수집 카드)를 모든 사용자에게 숨기고 수집을 강제 OFF 하는 토글. 설정 카드는 tiper@pentasecurity.com(하드코딩 — [trend-admin.ts](../src/lib/trend-admin.ts) `TREND_FEATURE_ADMIN_EMAIL`, 변경 계획 없음)에만 렌더되며 효과는 워크스페이스 전체.
+  - **영속화**: `agents(kind='trend').config_json.featureHidden` — DB 마이그레이션 없음.
+  - **API**: [PATCH /api/kb/trend](../src/app/api/kb/trend/route.ts) body 를 `{enabled?, featureHidden?}` 로 확장. featureHidden 변경은 `canManageTrendFeature` 서버 검증(403 — UI 숨김은 보안이 아니므로), 숨김 ON = `auto_run` 강제 false(trend-scan cron 이 auto_run 게이트라 수집 중지), 숨김 상태의 `enabled: true` 직접 호출은 409 차단.
+  - **숨김 해제 ≠ 수집 재개**: 해제는 featureHidden 만 풀고 auto_run 은 false 유지 — 스위치를 다시 켜야 즉시 1회 수집 + cron 재개(사용자 확인된 기대 동작).
+  - **UI**: [kb/page.tsx](<../src/app/(app)/kb/page.tsx>) 숨김 시 TrendSwitch·trend 탭·카드 비노출, `?tab=trend` 직접 진입은 url 탭 폴백. [TrendFeatureCard](../src/components/settings/TrendFeatureCard.tsx)(신규, 설정 우측 컬럼 — 관리자 계정에만 렌더).
+  - **한계(의도)**: 이미 수집된 trend 소스는 UI 만 숨김 — RAG 검색에는 계속 참여. lint·build PASS.
+
 - **버전 비교 하이브리드(슬라이드 쌍 + per-slide diff) & 모바일 인라인** (2026-06-12):
   문서 상세의 버전 비교를 텍스트 diff 단일 화면에서 하이브리드로 교체 — 전날 구두 합의됐으나 코드·문서에 미반영이었던 누락분.
   - **슬라이드 단위 diff**: [diff.ts](../src/lib/diff.ts) `slideLines`(슬라이드 1장 → 번호 없는 읽기 라인 — 위치 이동과 내용 변경을 분리), `diffSlidePairs`(내용 동일 슬라이드를 LCS 앵커로 잡고 앵커 사이 구간을 순서대로 짝지어 same/changed/added/removed). `deckToLines` 출력은 기존과 동일(전체 diff·stats 불변).

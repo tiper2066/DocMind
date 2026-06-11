@@ -50,3 +50,25 @@ export async function canUseApprovalActions(userId: string): Promise<boolean> {
   if (!process.env.APPROVAL_ADMIN_EMAILS?.trim()) return true;
   return approvalAdminAllowed(await emailOf(userId));
 }
+
+// 트렌드 기능 숨김(강제 OFF) 설정 권한 — 데모용 단일 계정 하드코딩(변경 계획 없음).
+const TREND_FEATURE_ADMIN_EMAIL = "tiper@pentasecurity.com";
+
+export function trendFeatureAdminAllowed(
+  email: string | null | undefined,
+): boolean {
+  return !!email && email.toLowerCase() === TREND_FEATURE_ADMIN_EMAIL;
+}
+
+export async function canManageTrendFeature(userId: string): Promise<boolean> {
+  return trendFeatureAdminAllowed(await emailOf(userId));
+}
+
+// agents(kind='trend').config_json 의 featureHidden 플래그.
+export function trendFeatureHidden(configJson: unknown): boolean {
+  return (
+    !!configJson &&
+    typeof configJson === "object" &&
+    (configJson as { featureHidden?: boolean }).featureHidden === true
+  );
+}

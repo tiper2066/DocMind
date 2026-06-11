@@ -1,14 +1,20 @@
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
+import { auth } from "@/auth";
 import { db } from "@/db/client";
 import { agents } from "@/db/schema";
 import { getWorkspaceContext } from "@/lib/rbac";
 import { ensureMonitorAgent } from "@/lib/agent/events";
 import { getPolicy, getNotifyChannel } from "@/lib/agent/policy";
+import {
+  trendFeatureAdminAllowed,
+  trendFeatureHidden,
+} from "@/lib/trend-admin";
 import { SettingsForm } from "@/components/settings/SettingsForm";
 import { TemplateCard } from "@/components/settings/TemplateCard";
 import { ModeCard } from "@/components/settings/ModeCard";
+import { TrendFeatureCard } from "@/components/settings/TrendFeatureCard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,6 +34,21 @@ export default async function SettingsPage() {
   const notifyChannel = getNotifyChannel(agent ?? { configJson: {} }) ?? "";
   const autoRun = agent?.autoRun ?? true;
 
+  // 트렌드 기능 숨김 설정은 하드코딩 관리자 계정에만 노출 (src/lib/trend-admin.ts).
+  const session = await auth();
+  const isTrendFeatureAdmin = trendFeatureAdminAllowed(session?.user?.email);
+  let trendHidden = false;
+  if (isTrendFeatureAdmin) {
+    const [trendAgent] = await db
+      .select({ configJson: agents.configJson })
+      .from(agents)
+      .where(
+        and(eq(agents.workspaceId, ctx.workspaceId), eq(agents.kind, "trend")),
+      )
+      .limit(1);
+    trendHidden = trendFeatureHidden(trendAgent?.configJson);
+  }
+
   return (
     <main className="mx-auto max-w-6xl px-6 py-8">
       <h1 className="font-heading text-heading-3 text-ink">설정</h1>
@@ -42,6 +63,9 @@ export default async function SettingsPage() {
         <div className="space-y-6">
           <TemplateCard />
           <ModeCard />
+          {isTrendFeatureAdmin && (
+            <TrendFeatureCard initialHidden={trendHidden} />
+          )}
         </div>
       </div>
     </main>

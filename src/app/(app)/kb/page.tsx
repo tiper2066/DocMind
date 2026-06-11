@@ -5,7 +5,7 @@ import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { agents, sources, sourceChunks } from "@/db/schema";
 import { getWorkspaceContext } from "@/lib/rbac";
-import { canToggleTrend } from "@/lib/trend-admin";
+import { canToggleTrend, trendFeatureHidden } from "@/lib/trend-admin";
 import {
   Sheet,
   SheetTrigger,
@@ -108,7 +108,7 @@ export default async function KbPage({
   };
 
   const [trendAgent] = await db
-    .select({ autoRun: agents.autoRun })
+    .select({ autoRun: agents.autoRun, configJson: agents.configJson })
     .from(agents)
     .where(
       and(eq(agents.workspaceId, ctx.workspaceId), eq(agents.kind, "trend")),
@@ -116,6 +116,10 @@ export default async function KbPage({
     .limit(1);
   const trendEnabled = trendAgent?.autoRun ?? false;
   const trendToggleAllowed = await canToggleTrend(ctx.userId);
+  // 설정에서 기능 숨김 시 스위치·trend 탭·수집 카드 전부 비노출 (수집도 강제 OFF 상태).
+  const trendHidden = trendFeatureHidden(trendAgent?.configJson);
+  const effectiveTab: KbTab =
+    trendHidden && activeTab === "trend" ? "url" : activeTab;
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-8">
@@ -126,20 +130,24 @@ export default async function KbPage({
             사내 URL · 파일을 등록하면 AI 가 학습합니다.
           </p>
         </div>
-        <TrendSwitch
-          initialEnabled={trendEnabled}
-          canToggle={trendToggleAllowed}
-        />
+        {!trendHidden && (
+          <TrendSwitch
+            initialEnabled={trendEnabled}
+            canToggle={trendToggleAllowed}
+          />
+        )}
       </div>
 
       <KbFolderTabs>
-        <Tabs defaultValue={activeTab} className="space-y-6">
+        <Tabs defaultValue={effectiveTab} className="space-y-6">
           <TabsList variant="chip">
             <TabsTrigger value="url">URL ({urlAll.length})</TabsTrigger>
             <TabsTrigger value="file">파일 ({fileAll.length})</TabsTrigger>
-            <TabsTrigger value="trend">
-              최신 지식 및 동향 ({trendAll.length})
-            </TabsTrigger>
+            {!trendHidden && (
+              <TabsTrigger value="trend">
+                최신 지식 및 동향 ({trendAll.length})
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="url" className="space-y-6">
@@ -164,27 +172,29 @@ export default async function KbPage({
             />
           </TabsContent>
 
-          <TabsContent value="trend" className="space-y-6">
-            <p className="text-body-sm text-steel">
-              스위치가 켜져 있는 동안 AI 가 지식 베이스의 주제를 기반으로 매일
-              12시·24시(워크스페이스 기준시간)에 관련 최신 자료를 자동
-              수집합니다. 켜는 즉시 1회 수집합니다.
-            </p>
-            <SourceGrid
-              sources={trendPg.items}
-              emptyHint={
-                trendEnabled
-                  ? "수집된 자료가 아직 없습니다. 수집에는 수 분이 걸릴 수 있습니다."
-                  : "우측 상단의 '최신 지식 및 동향 검색' 스위치를 켜면 AI 가 관련 최신 자료를 수집합니다."
-              }
-            />
-            <SourcePagination
-              tab="trend"
-              page={trendPg.page}
-              totalPages={trendPg.totalPages}
-              pages={clampedPages}
-            />
-          </TabsContent>
+          {!trendHidden && (
+            <TabsContent value="trend" className="space-y-6">
+              <p className="text-body-sm text-steel">
+                스위치가 켜져 있는 동안 AI 가 지식 베이스의 주제를 기반으로 매일
+                12시·24시(워크스페이스 기준시간)에 관련 최신 자료를 자동
+                수집합니다. 켜는 즉시 1회 수집합니다.
+              </p>
+              <SourceGrid
+                sources={trendPg.items}
+                emptyHint={
+                  trendEnabled
+                    ? "수집된 자료가 아직 없습니다. 수집에는 수 분이 걸릴 수 있습니다."
+                    : "우측 상단의 '최신 지식 및 동향 검색' 스위치를 켜면 AI 가 관련 최신 자료를 수집합니다."
+                }
+              />
+              <SourcePagination
+                tab="trend"
+                page={trendPg.page}
+                totalPages={trendPg.totalPages}
+                pages={clampedPages}
+              />
+            </TabsContent>
+          )}
         </Tabs>
       </KbFolderTabs>
 

@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 
 import { db } from "@/db/client";
 import { sources, auditLogs } from "@/db/schema";
-import { inngest } from "@/inngest/client";
+import { dispatch } from "@/inngest/client";
 import { getWorkspaceContext } from "@/lib/rbac";
 import { deleteSourceObjects } from "@/lib/storage";
 
@@ -60,7 +60,7 @@ export async function PATCH(
   }
   // URL 소스는 교체할 내용이 없고, 외부 페이지 변경을 detect 가 재크롤로 잡는다.
 
-  await inngest.send({
+  await dispatch({
     name: "agent/detect.requested",
     data: { workspaceId: ctx.workspaceId, sourceId: id },
   });

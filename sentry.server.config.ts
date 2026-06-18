@@ -4,15 +4,19 @@
 
 import * as Sentry from "@sentry/nextjs";
 
-Sentry.init({
-  dsn: "https://15a46e4eb0e447613f306485226df69e@o4511464655945728.ingest.us.sentry.io/4511464694415360",
+// Sentry 트라이얼 종료 후 연결 해제 — DSN(env) 이 있을 때만 초기화한다. 복원하려면
+// SENTRY_DSN 을 .env 에 다시 넣으면 된다(과거 하드코딩 DSN 은 폐기).
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
 
-  // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
-  tracesSampleRate: 1,
+    // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
+    tracesSampleRate: 1,
 
-  // Enable logs to be sent to Sentry
-  enableLogs: true,
+    // Enable logs to be sent to Sentry
+    enableLogs: true,
 
-  // plan §10: PII는 로그에 남기지 않음. 필요 시 beforeSend 로 명시적 화이트리스트.
-  sendDefaultPii: false,
-});
+    // plan §10: PII는 로그에 남기지 않음. 필요 시 beforeSend 로 명시적 화이트리스트.
+    sendDefaultPii: false,
+  });
+}

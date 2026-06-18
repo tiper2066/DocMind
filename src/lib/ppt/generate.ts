@@ -20,6 +20,7 @@ import {
   type PlanSection,
 } from "@/lib/prompts/outline";
 import { SLIDE_FILL_SYSTEM, fillSlideTool } from "@/lib/prompts/slide-fill";
+import { UI_ONLY } from "@/lib/demo-mode";
 import {
   DeckSchema,
   SlideSchema,
@@ -66,12 +67,12 @@ export async function generateDeck(input: GenerateInput): Promise<Deck> {
     .filter(Boolean)
     .join(" ");
 
-  const [headlineVec] = await embed([headlineQuery || docTypeLabel], "query");
-  const headlineMatches = await kbMatchByVector(
-    input.workspaceId,
-    headlineVec,
-    5,
-  );
+  // UI-only 데모: Voyage 임베딩·KB 매칭 스킵.
+  let headlineMatches: KbMatch[] = [];
+  if (!UI_ONLY) {
+    const [headlineVec] = await embed([headlineQuery || docTypeLabel], "query");
+    headlineMatches = await kbMatchByVector(input.workspaceId, headlineVec, 5);
+  }
 
   // Plan A — 본문 주제 리스트를 먼저 계획. 그 리스트가 곧 agenda 항목이자
   // 각 본문 슬라이드의 제목이 된다(개수·제목이 구조적으로 일치).
@@ -81,18 +82,24 @@ export async function generateDeck(input: GenerateInput): Promise<Deck> {
   const fixed = 1 /*cover*/ + (includeAgenda ? 1 : 0) + 1 /*cta*/;
   const bodyBudget = Math.max(1, input.lengthPages - fixed); // 주제 + (선택)quote + (풀버전)section 디바이더
 
-  const plan = await proposePlan({
-    docTypeLabel,
-    answers: input.answers,
-    sectionCount: Math.min(bodyBudget, includeAgenda ? AGENDA_MAX : bodyBudget),
-    fullVersion,
-    kbHeadline: headlineMatches
-      .map(
-        (m) =>
-          `- ${m.title ?? "(제목 없음)"}: ${m.text.slice(0, 200).replace(/\s+/g, " ")}`,
-      )
-      .join("\n"),
-  });
+  const planSectionCount = Math.min(
+    bodyBudget,
+    includeAgenda ? AGENDA_MAX : bodyBudget,
+  );
+  const plan = UI_ONLY
+    ? cannedPlan(planSectionCount, fullVersion)
+    : await proposePlan({
+        docTypeLabel,
+        answers: input.answers,
+        sectionCount: planSectionCount,
+        fullVersion,
+        kbHeadline: headlineMatches
+          .map(
+            (m) =>
+              `- ${m.title ?? "(제목 없음)"}: ${m.text.slice(0, 200).replace(/\s+/g, " ")}`,
+          )
+          .join("\n"),
+      });
 
   // quote 는 흐름에만 넣고 목차엔 안 올린다. 주제 슬라이드 수 = agenda 항목 수.
   const wantQuote = !!plan.includeQuote && bodyBudget >= 3;
@@ -144,34 +151,42 @@ export async function generateDeck(input: GenerateInput): Promise<Deck> {
     query: `${input.answers.cta} ${input.answers.keyMessage}`,
   });
 
-  const specVectors = await embed(
-    specs.map((s) => s.query.slice(0, 400)),
-    "query",
-  );
-  const specMatches: KbMatch[][] = await Promise.all(
-    specVectors.map((v) => kbMatchByVector(input.workspaceId, v, 3)),
-  );
-
   const topics = sections.map((s) => s.title);
   const totalSlides =
     specs.length + (includeAgenda ? 1 : 0) + groupCount;
-  const limit = pLimit(FILL_CONCURRENCY);
-  const filled = await Promise.all(
-    specs.map((spec, idx) =>
-      limit(async () =>
-        fillSlideWithRetry({
-          input,
-          docTypeLabel,
-          kind: spec.kind,
-          slideIndex: idx,
-          totalSlides,
-          topics,
-          forcedSlideTitle: spec.forcedSlideTitle,
-          matches: specMatches[idx],
-        }),
+
+  let filled: Slide[];
+  if (UI_ONLY) {
+    // 고정 슬라이드 — AI(fill)·Voyage(spec 매칭) 호출 없이 답변 기반 placeholder.
+    filled = specs.map((spec) =>
+      cannedSlide(spec.kind, input, docTypeLabel, spec.forcedSlideTitle),
+    );
+  } else {
+    const specVectors = await embed(
+      specs.map((s) => s.query.slice(0, 400)),
+      "query",
+    );
+    const specMatches: KbMatch[][] = await Promise.all(
+      specVectors.map((v) => kbMatchByVector(input.workspaceId, v, 3)),
+    );
+    const limit = pLimit(FILL_CONCURRENCY);
+    filled = await Promise.all(
+      specs.map((spec, idx) =>
+        limit(async () =>
+          fillSlideWithRetry({
+            input,
+            docTypeLabel,
+            kind: spec.kind,
+            slideIndex: idx,
+            totalSlides,
+            topics,
+            forcedSlideTitle: spec.forcedSlideTitle,
+            matches: specMatches[idx],
+          }),
+        ),
       ),
-    ),
-  );
+    );
+  }
 
   // 조립: cover → (agenda) → [section 디바이더 + 그 그룹 주제]× → (quote) → cta
   const cover = filled[0];
@@ -293,6 +308,101 @@ const DEFAULT_TOPICS = [
 
 // 풀버전(16장+)에서 플래너가 section 제목을 안 주거나 부족할 때의 폴백 대단원 제목.
 const DEFAULT_SECTION_TITLES = ["배경과 현황", "핵심 제안", "실행 방안", "기대 효과"];
+
+// UI-only 데모: proposePlan(AI) 대신 기본 주제로 본문 계획을 구성. kind 를 순환시켜
+// 슬라이드 종류가 다양하게 보이도록 한다.
+function cannedPlan(sectionCount: number, fullVersion: boolean): PlanToolInput {
+  const kinds = PLAN_KINDS as readonly PlanSection["kind"][];
+  const sections: PlanSection[] = Array.from(
+    { length: Math.max(1, sectionCount) },
+    (_, i) => ({
+      title: DEFAULT_TOPICS[i % DEFAULT_TOPICS.length],
+      kind: kinds[i % kinds.length],
+    }),
+  );
+  return {
+    sections,
+    includeQuote: true,
+    sectionTitles: fullVersion ? DEFAULT_SECTION_TITLES : undefined,
+  };
+}
+
+// UI-only 데모: fillSlideOnce(AI) 대신 인터뷰 답변을 반영한 고정 슬라이드. 필드
+// 형태는 fallbackSlide 와 동일하게 맞춰 DeckSchema 검증을 통과시킨다.
+function cannedSlide(
+  kind: SlideKind,
+  input: GenerateInput,
+  docTypeLabel: string,
+  forcedSlideTitle?: string,
+): Slide {
+  const t = forcedSlideTitle?.trim();
+  const a = input.answers;
+  const cut = (s: string, n: number) => s.slice(0, n);
+  switch (kind) {
+    case "cover":
+      return {
+        kind: "cover",
+        title: cut(
+          input.forcedTitle?.trim() || a.keyMessage || input.documentTitle,
+          80,
+        ),
+        subtitle: cut(`${docTypeLabel} · ${a.reader} 대상`, 140),
+        date: new Date().toISOString().slice(0, 10),
+      };
+    case "agenda":
+      return { kind: "agenda", items: DEFAULT_TOPICS.slice(0, 5) };
+    case "section":
+      return { kind: "section", index: 1, title: t || "섹션" };
+    case "twoCol":
+      return {
+        kind: "twoCol",
+        title: t || "현황과 제안",
+        left: { label: "AS-IS", body: cut(`${a.objection} 우려가 남아 있는 현재 상태`, 800) },
+        right: { label: "TO-BE", body: cut(`${a.keyMessage} 로 개선된 모습`, 800) },
+      };
+    case "metric":
+      return {
+        kind: "metric",
+        title: t || "핵심 지표",
+        metrics: [
+          { label: "도입 효과", value: "+30%" },
+          { label: "대응 시간", value: "-50%" },
+          { label: "고객 만족", value: "98%" },
+        ],
+      };
+    case "quote":
+      return {
+        kind: "quote",
+        text: cut(a.keyMessage || "신뢰할 수 있는 파트너입니다.", 400),
+        attribution: cut(`${a.reader} 고객`, 80),
+      };
+    case "image":
+      return {
+        kind: "image",
+        title: t || "처리 흐름",
+        nodes: ["요구 파악", "솔루션 적용", "효과 검증"],
+        direction: "horizontal",
+      };
+    case "cta":
+      return {
+        kind: "cta",
+        headline: cut(a.keyMessage || "다음 단계로 진행해 주세요", 80),
+        action: cut(a.cta || "담당자와 일정 협의", 60),
+      };
+    case "bullets":
+    default:
+      return {
+        kind: "bullets",
+        title: t || "본문",
+        bullets: [
+          { text: cut(a.keyMessage || "핵심 메시지", 160), level: 0 },
+          { text: cut(`${a.reader} 관점의 핵심 가치`, 160), level: 0 },
+          { text: cut(`${a.objection} 에 대한 대응 방안`, 160), level: 1 },
+          { text: cut(`${a.cta} 로 이어지는 다음 단계`, 160), level: 0 },
+        ],
+      };
+  }
+}
 
 // 배열을 g 개의 연속 그룹으로 최대한 균등 분할(앞 그룹이 +1 흡수).
 function distributeEvenly<T>(arr: T[], g: number): T[][] {

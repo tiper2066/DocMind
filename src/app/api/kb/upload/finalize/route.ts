@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db/client";
 import { sources } from "@/db/schema";
-import { inngest } from "@/inngest/client";
+import { dispatch } from "@/inngest/client";
 import { getWorkspaceContext } from "@/lib/rbac";
 
 export const runtime = "nodejs";
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
     })
     .returning({ id: sources.id });
 
-  await inngest.send({
+  await dispatch({
     name: "source/crawl.requested",
     data: { workspaceId: ctx.workspaceId, sourceId: row.id },
   });

@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { db } from "@/db/client";
 import { agents } from "@/db/schema";
-import { inngest } from "@/inngest/client";
+import { dispatch } from "@/inngest/client";
 import { getWorkspaceContext } from "@/lib/rbac";
 import {
   canManageTrendFeature,
@@ -97,7 +97,7 @@ export async function PATCH(req: Request) {
   }
 
   if (enabled === true && !nextHidden) {
-    await inngest.send({
+    await dispatch({
       name: "agent/trend.scan.requested",
       data: { workspaceId: ctx.workspaceId },
     });

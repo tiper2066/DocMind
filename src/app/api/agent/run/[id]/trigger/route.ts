@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 
 import { db } from "@/db/client";
 import { agents } from "@/db/schema";
-import { inngest } from "@/inngest/client";
+import { dispatch } from "@/inngest/client";
 import { getWorkspaceContext } from "@/lib/rbac";
 import { canUseApprovalActions } from "@/lib/trend-admin";
 
@@ -46,7 +46,7 @@ export async function POST(
   const parsed = Body.safeParse(json ?? {});
   const sourceId = parsed.success ? parsed.data.sourceId : undefined;
 
-  await inngest.send({
+  await dispatch({
     name: "agent/detect.requested",
     data: { workspaceId: ctx.workspaceId, agentId, sourceId },
   });

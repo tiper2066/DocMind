@@ -1,10 +1,5 @@
 import pLimit from "p-limit";
 
-const apiKey = process.env.VOYAGE_API_KEY;
-if (!apiKey) {
-  throw new Error("VOYAGE_API_KEY is not set");
-}
-
 export const EMBED_MODEL = "voyage-3";
 export const EMBED_DIM = 1024;
 const BATCH_SIZE = 128;
@@ -45,6 +40,12 @@ async function callVoyage(
   inputType: EmbedInputType,
   attempt = 0,
 ): Promise<number[][]> {
+  // 지연 검증: import 시점이 아니라 실제 호출 시점에만 키를 확인한다(UI-only 데모
+  // 모드에서 키를 제거해도 이 모듈 import 가 크래시하지 않도록).
+  const apiKey = process.env.VOYAGE_API_KEY;
+  if (!apiKey) {
+    throw new Error("VOYAGE_API_KEY is not set");
+  }
   const res = await fetch(ENDPOINT, {
     method: "POST",
     headers: {

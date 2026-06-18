@@ -984,6 +984,18 @@ SENTRY_DSN=
 
 ## 16. 결정 로그
 
+- **UI-only 데모 모드 — 발표·데모 종료 후 비용/만료 서비스 연결 해제** (2026-06-18):
+  해커톤 발표·데모가 끝나, 비용(Anthropic·Voyage)·만료(Sentry 14일 트라이얼)·한도(Inngest 무료) 서비스의 연결을 끊되 **기존 데이터로 UI 는 그대로 열람**할 수 있게 한다. Supabase(DB/Storage)·Google 로그인은 무료라 유지(페이지가 기존 문서·KB 를 DB 에서 읽어 렌더). 방식: 단일 플래그 + 코드/SDK 보존(키 다시 넣으면 원복).
+  - **플래그**: [src/lib/demo-mode.ts](../src/lib/demo-mode.ts) `UI_ONLY = process.env.DEMO_UI_ONLY === "1"`. 서버 전용. **정확히 `"1"` 일 때만** 진입 — `0`/빈값/미설정은 실서비스 복원(단 키도 채워야 하고 env 변경 후 재시작 필요).
+  - **인터뷰(AI 없이 고정)**: [interview/service.ts](../src/lib/interview/service.ts) `generateQuestion()` 진입부에서 `UI_ONLY` 면 `CANNED_QUESTIONS[step]`(5단계 고정 질문/빠른답변) 반환 — `kbMatch`(Voyage)·`anthropic.messages.create` 둘 다 스킵. start/answer/step/SSR 전부 이 함수를 거치므로 단계 이동·되돌아가기 그대로 작동.
+  - **문서 생성(고정 덱)**: [ppt/generate.ts](../src/lib/ppt/generate.ts) `generateDeck()` 의 `embed`/`kbMatchByVector`/`proposePlan`/spec 임베딩을 `UI_ONLY` 분기로 스킵. `cannedPlan`(DEFAULT_TOPICS + kind 순환) + `cannedSlide`(인터뷰 답변 반영, 필드는 fallbackSlide 형태라 DeckSchema 통과)로 채우고 **조립부(cover→agenda→section→quote→cta→backCover)·meta·미리보기·.pptx 경로는 100% 재사용**. finalize 라우트 무변경.
+  - **Inngest no-op**: [inngest/client.ts](../src/inngest/client.ts) `dispatch()` 래퍼(`UI_ONLY` 면 send 생략) + 6개 발화 라우트(kb url/upload/sources·trend·agent approve·trigger)를 `inngest.send` → `dispatch` 교체. 키 없이도 라우트 200, 백그라운드 처리만 안 됨(의도).
+  - **키 제거 가능(지연 초기화)**: [anthropic.ts](../src/lib/anthropic.ts) top-level throw 제거 → `export const anthropic` 을 Proxy 로 감싸 첫 접근 때 클라이언트 생성(키 확인). [embeddings.ts](../src/lib/embeddings.ts) 키 검증을 `callVoyage()` 내부로 이동. 두 모듈은 UI-only 에서 import 만 되고 호출 안 됨 → 키 삭제해도 빌드·런타임 무탈. (§8 함정 등재)
+  - **Sentry 분리**: [next.config.ts](../next.config.ts) `withSentryConfig` 래퍼 제거(빌드 소스맵 업로드 비활성). [sentry.server.config.ts](../sentry.server.config.ts)·[sentry.edge.config.ts](../sentry.edge.config.ts) 는 `SENTRY_DSN`, [instrumentation-client.ts](../src/instrumentation-client.ts) 는 `NEXT_PUBLIC_SENTRY_DSN` 있을 때만 `Sentry.init`(과거 하드코딩 DSN 폐기). 파일 보존(원복 용이).
+  - **검증**: lint PASS. 4종 키 + Sentry DSN 비운 채 `DEMO_UI_ONLY=1 pnpm build` PASS(import throw 없음 확인). `.env.example` 에 `DEMO_UI_ONLY` + Sentry env 가드 문서화.
+  - **UI-only 제약(의도)**: 새 KB 소스 추가는 업로드만 되고 크롤·임베딩 미진행(`crawling` 유지), 에이전트 자율 루프·트렌드 수집·스케줄 생성 미동작. 기존 ready 소스·문서·버전 열람은 정상.
+  - **별건**: corepack 이 `pnpm dev` 때 pnpm 다운로드 확인 프롬프트를 띄우던 문제 → [package.json](../package.json) `packageManager: "pnpm@11.7.0"` 고정으로 해소.
+
 - **KB "최신 지식 및 동향" 기능 숨김 설정 — 하드코딩 관리자 전용** (2026-06-12):
   설정 페이지에서 트렌드 기능 전체(스위치·탭·수집 카드)를 모든 사용자에게 숨기고 수집을 강제 OFF 하는 토글. 설정 카드는 tiper@pentasecurity.com(하드코딩 — [trend-admin.ts](../src/lib/trend-admin.ts) `TREND_FEATURE_ADMIN_EMAIL`, 변경 계획 없음)에만 렌더되며 효과는 워크스페이스 전체.
   - **영속화**: `agents(kind='trend').config_json.featureHidden` — DB 마이그레이션 없음.

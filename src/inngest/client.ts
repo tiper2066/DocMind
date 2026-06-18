@@ -1,7 +1,17 @@
 import { Inngest } from "inngest";
 import { z } from "zod";
+import { UI_ONLY } from "@/lib/demo-mode";
 
 export const inngest = new Inngest({ id: "docmind" });
+
+// UI-only 데모: 이벤트 발화를 no-op 으로 단락한다(Inngest 키 없이도 API 라우트가
+// 정상 200 반환, 백그라운드 처리는 안 됨 — 의도된 동작). 실서비스에선 그대로 전송.
+export async function dispatch(
+  ...args: Parameters<typeof inngest.send>
+): Promise<void> {
+  if (UI_ONLY) return;
+  await inngest.send(...args);
+}
 
 export const SourceCrawlRequested = z.object({
   workspaceId: z.string().uuid(),

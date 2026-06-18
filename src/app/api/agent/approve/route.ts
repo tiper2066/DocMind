@@ -18,7 +18,7 @@ import { getWorkspaceContext } from "@/lib/rbac";
 import { canUseApprovalActions } from "@/lib/trend-admin";
 import { appendEvent, endRun } from "@/lib/agent/events";
 import { dispatchApprovalNotifications } from "@/lib/notify";
-import { inngest } from "@/inngest/client";
+import { dispatch } from "@/inngest/client";
 
 export const runtime = "nodejs";
 
@@ -112,7 +112,7 @@ export async function POST(req: Request) {
     });
 
     if (decision === "approve") {
-      await inngest.send({
+      await dispatch({
         name: "source.changed",
         data: {
           workspaceId: ctx.workspaceId,

@@ -9,6 +9,7 @@ import {
 } from "@/lib/anthropic";
 import { embedOne } from "@/lib/embeddings";
 import { INTERVIEW_SYSTEM, ASK_QUESTION_TOOL } from "@/lib/prompts/interview";
+import { UI_ONLY } from "@/lib/demo-mode";
 import { DOC_TYPE_LABELS, type AnswerableStep, type Answers } from "./machine";
 
 export type KbMatch = {
@@ -86,6 +87,36 @@ function shouldFetchKb(
   return STEPS_NEEDING_FRESH_KB.has(step);
 }
 
+// UI-only 데모 모드용 고정 질문/빠른답변. AI 호출 없이 인터뷰 흐름을 그대로
+// 둘러볼 수 있게 한다(데모 시나리오: 독자=임원·CTA=계약·반론=가격·핵심메시지).
+const CANNED_QUESTIONS: Record<AnswerableStep, QuestionResult> = {
+  reader: {
+    aiMessage: "이 자료를 가장 먼저 읽을 사람은 누구인가요?",
+    quickReplies: ["임원·결정권자", "실무 담당자", "기술 검토팀", "고객사"],
+  },
+  cta: {
+    aiMessage: "자료를 읽은 뒤 그분이 어떤 행동을 하길 바라나요?",
+    quickReplies: ["계약 체결", "도입 검토 승인", "예산 배정", "미팅 일정 확정"],
+  },
+  objection: {
+    aiMessage: "그분이 가장 먼저 떠올릴 반론이나 우려는 무엇일까요?",
+    quickReplies: ["가격이 부담된다", "도입 기간이 길다", "기존 시스템과 호환", "효과가 불확실"],
+  },
+  keyMessage: {
+    aiMessage: "이 자료가 전달할 단 하나의 핵심 메시지를 한 줄로 정해주세요.",
+    quickReplies: [
+      "WAPPLES로 웹 위협 선제 차단",
+      "검증된 기술로 안전하게",
+      "도입 즉시 효과 입증",
+      "최고의 비용 대비 효과",
+    ],
+  },
+  length: {
+    aiMessage: "분량과 보안 레벨을 선택해주세요.",
+    quickReplies: ["10 ~ 12장", "8 ~ 9장", "13 ~ 15장", "16장 이상"],
+  },
+};
+
 export async function generateQuestion(input: {
   workspaceId: string;
   documentType: string;
@@ -93,6 +124,11 @@ export async function generateQuestion(input: {
   answers: Answers;
   forceKbMatch?: boolean;
 }): Promise<QuestionResult> {
+  // UI-only 데모: AI(질문 생성)·Voyage(KB 매칭) 호출 없이 고정 질문 반환.
+  if (UI_ONLY) {
+    return CANNED_QUESTIONS[input.step];
+  }
+
   const queryParts = [
     DOC_TYPE_LABELS[input.documentType] ?? input.documentType,
     input.answers.reader,

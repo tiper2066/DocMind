@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { TopNav } from "@/components/nav/TopNav";
+import { DemoBanner } from "@/components/DemoBanner";
 import { Toaster } from "@/components/ui/sonner";
 import { FolderStoreProvider } from "@/lib/folders/store";
 
@@ -15,6 +16,7 @@ export default async function AppLayout({
   return (
     <FolderStoreProvider>
       <div className="flex min-h-svh flex-col">
+        <DemoBanner />
         <TopNav />
         <div className="flex-1">{children}</div>
         <Toaster />

@@ -993,6 +993,7 @@ SENTRY_DSN=
   - **키 제거 가능(지연 초기화)**: [anthropic.ts](../src/lib/anthropic.ts) top-level throw 제거 → `export const anthropic` 을 Proxy 로 감싸 첫 접근 때 클라이언트 생성(키 확인). [embeddings.ts](../src/lib/embeddings.ts) 키 검증을 `callVoyage()` 내부로 이동. 두 모듈은 UI-only 에서 import 만 되고 호출 안 됨 → 키 삭제해도 빌드·런타임 무탈. (§8 함정 등재)
   - **Sentry 분리**: [next.config.ts](../next.config.ts) `withSentryConfig` 래퍼 제거(빌드 소스맵 업로드 비활성). [sentry.server.config.ts](../sentry.server.config.ts)·[sentry.edge.config.ts](../sentry.edge.config.ts) 는 `SENTRY_DSN`, [instrumentation-client.ts](../src/instrumentation-client.ts) 는 `NEXT_PUBLIC_SENTRY_DSN` 있을 때만 `Sentry.init`(과거 하드코딩 DSN 폐기). 파일 보존(원복 용이).
   - **검증**: lint PASS. 4종 키 + Sentry DSN 비운 채 `DEMO_UI_ONLY=1 pnpm build` PASS(import throw 없음 확인). `.env.example` 에 `DEMO_UI_ONLY` + Sentry env 가드 문서화.
+  - **안내 배너**: 접속자가 데모 열람 전용임을 인지하도록 앱 최상단에 상시 배너([DemoBanner](../src/components/DemoBanner.tsx)) — `UI_ONLY` 일 때만 [(app)/layout](<../src/app/(app)/layout.tsx>) TopNav 위에 렌더, 문구 "[안내] 현재 API 연결 해제 상태로, UI(화면) 둘러보기만 가능합니다. (AI 기능 임시 중단)". 팝업 대신 상시 배너 선택(닫으면 사라지는 팝업은 둘러보는 내내 "왜 버튼이 안 눌리지" 혼란이 재발). amber 톤·다크모드 대응.
   - **UI-only 제약(의도)**: 새 KB 소스 추가는 업로드만 되고 크롤·임베딩 미진행(`crawling` 유지), 에이전트 자율 루프·트렌드 수집·스케줄 생성 미동작. 기존 ready 소스·문서·버전 열람은 정상.
   - **별건**: corepack 이 `pnpm dev` 때 pnpm 다운로드 확인 프롬프트를 띄우던 문제 → [package.json](../package.json) `packageManager: "pnpm@11.7.0"` 고정으로 해소.
 
